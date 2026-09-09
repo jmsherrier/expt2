@@ -1,0 +1,108 @@
+/* neutral grey background, mirrors the pilot's psychopy window color */
+html, body {
+  background-color: rgb(127, 127, 127);
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* every trial (canvas or text) is sized/centered to exactly fill the viewport below, so any
+     overflow is a sizing bug, not something to scroll past */
+  overflow: hidden;
+  font-family: 'Avenir Next', sans-serif;
+  color: black;
+}
+
+#pre-check-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+}
+
+#subject-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+}
+
+#subject-id-error {
+  color: #cc0000;
+  min-height: 1.2em;
+}
+
+#subject-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+  font-weight: bold;
+}
+
+#subject-confirm-number {
+  font-size: 4rem;
+}
+
+#subject-id-input {
+  font-size: 2rem;
+  width: 4rem;
+  text-align: center;
+  padding: 8px;
+}
+
+/* hide the native up/down spinner buttons -- Chrome/Safari (WebKit) */
+#subject-id-input::-webkit-inner-spin-button,
+#subject-id-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* hide the native up/down spinner -- Firefox */
+#subject-id-input {
+  -moz-appearance: textfield;
+}
+
+/* jsPsych's own display-element/content-wrapper chain has no definite height by default, so
+   flex centering has nothing to center within -- pin the whole chain to the viewport size.
+   font-size is scaled here (overriding jspsych.css's fixed 18px) and on #jspsych-target below
+   via --text-scale, set from VISUAL_ANGLE_SCALE in main.js, so instruction/transition/completion
+   text stays proportional to the same visual-angle factor as the canvas-drawn stimuli/prompts */
+:root {
+  --text-scale: 1;
+}
+
+#jspsych-target,
+.jspsych-display-element {
+  background-color: rgb(127, 127, 127);
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: calc(18px * var(--text-scale));
+}
+
+.jspsych-content-wrapper {
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+/* jspsych.css caps this at max-width: 95% and margin: auto, which lets a full-viewport canvas
+   overflow its capped container and forces a scrollbar -- centering is handled by the flex
+   wrapper above instead */
+.jspsych-content {
+  max-width: none;
+  margin: 0;
+}
+
+/* canvas defaults to inline display, leaving a few px of baseline whitespace below it that's
+   enough to trigger a scrollbar on an otherwise exactly-viewport-sized canvas */
+#jspsych-canvas-stimulus {
+  display: block;
+}

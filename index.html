@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MAFC Testing Experiment</title>
+
+  <script src="https://unpkg.com/jspsych@7.3.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-virtual-chinrest@2.0.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="style.css">
+
+  <script src="js/config.js"></script>
+  <script src="js/colors.js"></script>
+  <script src="js/conditions.js"></script>
+  <script src="js/rng.js"></script>
+  <script src="js/permutations.js"></script>
+  <script src="js/triallist.js"></script>
+  <script src="js/stimulus.js"></script>
+  <script src="js/expt_util.js?v=2"></script>
+  <script src="js/color_calibration.js"></script>
+  <script src="js/main_instructions.js"></script>
+  <script src="js/session_flow.js?v=2"></script>
+</head>
+
+<body>
+  <div id="pre-check-screen"></div>
+  <form id="subject-entry" style="display: none;">
+    <h2>Enter your participant number</h2>
+    <input type="text" id="subject-id-input" inputmode="numeric" autocomplete="off">
+    <p id="subject-id-error"></p>
+    <button type="submit">Continue</button>
+  </form>
+  <div id="subject-confirm" style="display: none;">
+    <p id="subject-confirm-number"><span id="subject-confirm-value"></span></p>
+    <p id="subject-confirm-note">Please refresh the website if this is not your participant number.</p>
+    <p id="subject-confirm-continue">Press Enter to continue.</p>
+  </div>
+  <div id="jspsych-target" style="display: none;"></div>
+</body>
+
+<script src="js/main.js?v=3"></script>
+</html>
