@@ -64,7 +64,7 @@ const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
 // stimulus durations are placeholders pending a pilot accuracy curve. This manipulation only has
 // the intended effective viewing-time contrast when the backward mask remains enabled.
 const STIMULUS_DURATIONS = [150, 400];
-const MASK_DURATION = 100;
+const MASK_DURATION = 50;
 const MASK_N_DOTS = 280;
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal

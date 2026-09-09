@@ -69,9 +69,9 @@ used once before any repeats.
 after trial construction: each `(n_choice, condition_id, correct_color)` cell is balanced as
 evenly as possible, and session-wide counts are exactly equal when the session size allows it.
 The same balancing rule is applied to practice trials within each condition. Immediately after
-the stimulus, a 100 ms mask displays 280 newly placed dots, with colors sampled uniformly from
-the four active colors. The fixed mask count prevents the mask from revealing the stimulus's
-numerosity, and the mask is necessary for the nominal durations to define effective viewing time.
+the stimulus, a 50 ms grayscale mask displays 280 newly placed dots. The fixed mask count
+prevents the mask from revealing the stimulus's numerosity, and the mask is necessary for the
+nominal durations to define effective viewing time.
 
 `STIMULUS_DURATIONS` remains a placeholder pending a pilot accuracy curve. If its levels are
 changed, keep the backward mask enabled so the intended duration manipulation remains valid.
@@ -121,7 +121,7 @@ short run.
   display calibration. Max density here is 280 dots (`[100,80,65,35]`), below the previous
   experiment's, so rejection sampling has room — but the values are still unvalidated.
 - `STIMULUS_DURATIONS = [150, 400]` is still provisional pending a pilot accuracy curve. The
-  duration manipulation assumes the 100 ms backward mask remains enabled.
+  duration manipulation assumes the 50 ms grayscale backward mask remains enabled.
 - Subject range is 1–10, inherited. A single-session study likely wants more; raise
   `MAX_SUBJECT_ID` in `config.js` and the three PHP files, add entries to `SUBJECT_SEEDS`, and
   update `max` on the number input in `index.html`.

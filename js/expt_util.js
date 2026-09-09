@@ -152,18 +152,17 @@ function drawStimulus(canvas, trial) {
 }
 
 // fixed dot count keeps the mask from revealing the numerosity of the stimulus that preceded it;
-// fresh positions and uniformly sampled colors make the flash non-diagnostic on every trial
+// fresh positions and neutral grayscale dots make the flash non-diagnostic on every trial
 function drawMask(canvas) {
   const ctx = canvas.getContext('2d');
   const [cx, cy] = canvasCenter(canvas);
   const pxPerDeg = getPxPerDeg();
   const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
-  const colors = Object.keys(ACTIVE_COLORS);
 
   generateDotPositions(MASK_N_DOTS, APERTURE_RADIUS_DEG, DOT_RADIUS_DEG).forEach(pos => {
     ctx.beginPath();
     ctx.arc(cx + pos[0] * pxPerDeg, cy - pos[1] * pxPerDeg, dotRadiusPx, 0, 2 * Math.PI);
-    ctx.fillStyle = ACTIVE_COLORS[colors[Math.floor(Math.random() * colors.length)]];
+    ctx.fillStyle = '#808080';
     ctx.fill();
   });
 }
