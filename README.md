@@ -1,8 +1,6 @@
-# MAFC testing experiment
+# WOTO testing experiment
 
-Standalone port of the previous MAFC main experiment, rebuilt around a new condition set. It
-shares no files, no data directory, and no filename prefix with the original — drop it on a PHP
-host and it runs on its own.
+Standalone port of the previous MAFC main experiment, rebuilt around a new condition set.
 
 ## Design
 
@@ -47,14 +45,14 @@ The output CSV retains the previous fields but adds `duration` immediately after
 not byte-for-byte identical to the previous experiment's header. `top` is `counts[0]` and
 `ratio_1..3` are `counts[i] / top`.
 
-## What changed, and why
+## What changed
 
 **`js/conditions.js` — counts are now the source of truth.** The old CSV stored `top` plus ratios
 of it. This design is stated in counts, and while every condition here happens to be expressible
 as `top=100` × a clean ratio, a future one might not be. The file now stores counts and derives
 `top`/`ratios` for the data columns.
 
-**`js/triallist.js` — permutation cycle refill (this is a real bug fix, not just a port).** The
+**`js/triallist.js` — permutation cycle refill.** The
 old builder shuffled the 24 color permutations once per condition per session and popped from
 them without ever refilling. That was safe only because 75 conditions × 96 reps meant each
 condition got 9–10 trials per session, always fewer than 24. With 8 conditions each condition
