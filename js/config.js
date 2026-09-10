@@ -1,16 +1,21 @@
 // fixed per-subject seeds, arbitrary but documented -- this app only needs to be internally
 // deterministic/reproducible. DELIBERATELY DIFFERENT from the previous experiment's seeds so a
 // subject who took part in both doesn't get a correlated trial order across the two studies.
-const SUBJECT_SEEDS = {
-  1: 512907, 2: 664218, 3: 209455, 4: 837640, 5: 391082,
-  6: 745913, 7: 128374, 8: 580261, 9: 963148, 10: 447025,
-};
+// trial labels are used as data identifiers and as the input to the deterministic seed below.
+// Keep this character set in sync with save.php, save_color.php, and progress.php.
+const TRIAL_LABEL_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
 
-// highest participant number this study accepts -- mirrored in save.php/save_color.php/
-// progress.php (MAX_SUBJECT_ID) and in index.html's number input. raise all four together.
-const MAX_SUBJECT_ID = 10;
+function seedForTrialLabel(label) {
+  label = String(label);
+  let hash = 2166136261;
+  for (let i = 0; i < label.length; i += 1) {
+    hash ^= label.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
 
-// filename stem for saved data: <prefix>_P01_S01.csv / <prefix>_P01_COLOR.csv. distinct from the
+// filename stem for saved data: <prefix>_<label>_S01.csv / <prefix>_<label>_COLOR.csv. distinct from the
 // previous experiment's MAFC_EXPT so the two studies' data files can never collide even if a
 // data directory is ever shared. mirrored in the three php endpoints.
 const DATA_PREFIX = 'MAFC2_EXPT';
@@ -79,7 +84,7 @@ const CSV_HEADER = 'date,time,sid,seed,gain_red,gain_green,gain_blue,gain_yellow
 // average across all reps
 const CALIBRATION_FLOOR = 0.20;
 const CALIBRATION_DOTS_PER_COLOR = 80;
-const N_COLOR_CALIBRATION_REPS = 7;
+const N_COLOR_CALIBRATION_REPS = 2;
 
 const COLOR_CSV_HEADER = 'date,time,sid,seed,trial,gain_red,gain_green,gain_blue,gain_yellow';
 
@@ -100,7 +105,7 @@ const CHINREST_INTRO_TEXT_RETURNING = `
   <p>Press spacebar whenever you're ready.</p>
 `;
 
-// shown as the very first screen of the experiment, before the participant number is even
+// shown as the very first screen of the experiment, before the trial label is even
 // entered. the previous experiment's monitor-consistency line is dropped here (nothing to be
 // consistent with in a single-session study) and replaced with a seating/lighting reminder, since
 // the chinrest calibration holds only for as long as the subject stays put.

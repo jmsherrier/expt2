@@ -40,7 +40,7 @@ are deterministic from the subject seed.
 
 `style.css`, `img/card.png`, and `js/{colors,rng,permutations,stimulus,color_calibration,main}.js`
 retain the original behavior. The HJKL color mapping, virtual chinrest and degree-based sizing,
-7-rep color-matching calibration, save-every-trial/retry/resume machinery, and all previous CSV
+2-rep color-matching calibration, save-every-trial/retry/resume machinery, and all previous CSV
 fields remain in place.
 
 The output CSV retains the previous fields but adds `duration` immediately after `trial`, so it is
@@ -97,9 +97,10 @@ this design's density.
 
 **Seeds.** New per-subject seeds, so a subject who ran both studies doesn't get correlated orders.
 
-**`DATA_PREFIX = 'MAFC2_EXPT'`** and **`MAX_SUBJECT_ID`** are now named constants in `config.js`
-and in all three PHP endpoints, instead of hard-coded strings and magic ranges. Files are written
-as `data/MAFC2_EXPT_P01_S01.csv` and `data/MAFC2_EXPT_P01_COLOR.csv`.
+**Trial labels.** The first screen accepts a manually chosen label containing 1-40 letters,
+numbers, underscores, or hyphens. The label is saved in `sid`, determines the reproducible trial
+order, and is used in filenames such as `data/MAFC2_EXPT_trial-001_S01.csv` and
+`data/MAFC2_EXPT_trial-001_COLOR.csv`.
 
 **Single-session wording.** The chinrest intro no longer says "access to this monitor for the
 next 10 weeks", the pre-check no longer asks about matching a previous session's monitor, and the
@@ -122,8 +123,5 @@ short run.
   experiment's, so rejection sampling has room — but the values are still unvalidated.
 - `STIMULUS_DURATIONS = [150, 400]` is still provisional pending a pilot accuracy curve. The
   duration manipulation assumes the 50 ms grayscale backward mask remains enabled.
-- Subject range is 1–10, inherited. A single-session study likely wants more; raise
-  `MAX_SUBJECT_ID` in `config.js` and the three PHP files, add entries to `SUBJECT_SEEDS`, and
-  update `max` on the number input in `index.html`.
 - Practice pools repeat conditions rather than sampling distinct ones (3 conditions across 20
   trials). Harmless — practice is never saved — but worth a look if you want more variety.

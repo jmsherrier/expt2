@@ -8,19 +8,18 @@
 
 header('Content-Type: application/json');
 
-const MAX_SUBJECT_ID = 10;
 const DATA_PREFIX = 'MAFC2_EXPT';
 
-$subjectId = filter_var($_GET['subject_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => MAX_SUBJECT_ID]]);
+$subjectId = $_GET['subject_id'] ?? null;
 
-if ($subjectId === false) {
+if (!is_string($subjectId) || !preg_match('/^[A-Za-z0-9_-]{1,40}$/', $subjectId)) {
     http_response_code(400);
     echo json_encode(['error' => 'invalid subject_id']);
     exit;
 }
 
 $dataDir = __DIR__ . '/data';
-$pattern = sprintf('%s/%s_P%02d_S??.csv', $dataDir, DATA_PREFIX, $subjectId);
+$pattern = sprintf('%s/%s_%s_S??.csv', $dataDir, DATA_PREFIX, $subjectId);
 
 $sessions = [];
 foreach (glob($pattern) as $file) {
@@ -33,7 +32,7 @@ foreach (glob($pattern) as $file) {
 
 // COLOR_CSV_HEADER in config.js, kept in the same order here since no CSV parser exists client-side
 $colorColumns = ['date', 'time', 'sid', 'seed', 'trial', 'gain_red', 'gain_green', 'gain_blue', 'gain_yellow'];
-$colorFile = sprintf('%s/%s_P%02d_COLOR.csv', $dataDir, DATA_PREFIX, $subjectId);
+$colorFile = sprintf('%s/%s_%s_COLOR.csv', $dataDir, DATA_PREFIX, $subjectId);
 
 $colorRows = [];
 if (is_file($colorFile)) {

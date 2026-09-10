@@ -47,11 +47,11 @@ function saveSessionData(subjectId, session, sessionData) {
 // filename stem comes from DATA_PREFIX (config.js) rather than being hard-coded, so the client
 // download and the three php endpoints can't drift apart
 function sessionDataFilename(subjectId, session) {
-  return `${DATA_PREFIX}_P${String(subjectId).padStart(2, '0')}_S${String(session).padStart(2, '0')}.csv`;
+  return `${DATA_PREFIX}_${subjectId}_S${String(session).padStart(2, '0')}.csv`;
 }
 
 async function fetchProgress(subjectId) {
-  const res = await fetch(`progress.php?subject_id=${subjectId}`);
+  const res = await fetch(`progress.php?subject_id=${encodeURIComponent(subjectId)}`);
   const body = await res.text();
   try {
     return JSON.parse(body);
@@ -264,7 +264,7 @@ function chinrestTrial() {
 // lines already on disk for this session (empty for a fresh session) -- seeding sessionData with
 // them is what keeps a resumed session's first save from clobbering the pre-crash rows
 function runSession(subjectId, sessionNumber, resumeFromTrial, isFirstSession, calibState, resumeLines) {
-  const seed = SUBJECT_SEEDS[subjectId];
+  const seed = seedForTrialLabel(subjectId);
   const allSessions = buildSubjectSessions(subjectId);
   const sessionTrials = allSessions[sessionNumber - 1];
   const trialsToRun = sessionTrials.slice(resumeFromTrial);

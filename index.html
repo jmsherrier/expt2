@@ -30,14 +30,14 @@
 <body>
   <div id="pre-check-screen"></div>
   <form id="subject-entry" style="display: none;">
-    <h2>Enter your participant number</h2>
-    <input type="text" id="subject-id-input" inputmode="numeric" autocomplete="off">
+    <h2>Enter a trial label</h2>
+    <input type="text" id="subject-id-input" maxlength="40" autocomplete="off" placeholder="e.g. trial-001">
     <p id="subject-id-error"></p>
     <button type="submit">Continue</button>
   </form>
   <div id="subject-confirm" style="display: none;">
     <p id="subject-confirm-number"><span id="subject-confirm-value"></span></p>
-    <p id="subject-confirm-note">Please refresh the website if this is not your participant number.</p>
+    <p id="subject-confirm-note">Please refresh the website if this is not the trial label you intended.</p>
     <p id="subject-confirm-continue">Press Enter to continue.</p>
   </div>
   <div id="jspsych-target" style="display: none;"></div>

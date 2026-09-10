@@ -50,21 +50,9 @@ html, body {
 
 #subject-id-input {
   font-size: 2rem;
-  width: 4rem;
+  width: min(24rem, 70vw);
   text-align: center;
   padding: 8px;
-}
-
-/* hide the native up/down spinner buttons -- Chrome/Safari (WebKit) */
-#subject-id-input::-webkit-inner-spin-button,
-#subject-id-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-/* hide the native up/down spinner -- Firefox */
-#subject-id-input {
-  -moz-appearance: textfield;
 }
 
 /* jsPsych's own display-element/content-wrapper chain has no definite height by default, so

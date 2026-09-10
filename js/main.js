@@ -13,7 +13,7 @@ const subjectEntryEl = document.getElementById('subject-entry');
 const subjectConfirmEl = document.getElementById('subject-confirm');
 const subjectConfirmValueEl = document.getElementById('subject-confirm-value');
 
-// very first screen of the whole page load, shown before the participant number is even entered
+// very first screen of the whole page load, shown before the trial label is even entered
 // -- spacebar reveals the subject-id form
 preCheckEl.innerHTML = PRE_CHECK_TEXT;
 document.addEventListener('keydown', function dismissPreCheck(event) {
@@ -28,11 +28,10 @@ document.addEventListener('keydown', function dismissPreCheck(event) {
 subjectEntryEl.addEventListener('submit', (event) => {
   event.preventDefault();
   const errorEl = document.getElementById('subject-id-error');
-  const enteredId = subjectIdInput.value.trim();
-  const subjectId = Number(enteredId);
+  const subjectId = subjectIdInput.value.trim();
 
-  if (!/^\d+$/.test(enteredId) || !Number.isInteger(subjectId) || subjectId < 1 || subjectId > MAX_SUBJECT_ID) {
-    errorEl.textContent = 'Please enter a whole number between 1 and 10.';
+  if (!TRIAL_LABEL_PATTERN.test(subjectId)) {
+    errorEl.textContent = 'Use 1-40 letters, numbers, underscores, or hyphens.';
     return;
   }
 

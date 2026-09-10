@@ -47,7 +47,7 @@ function assignBalancedDurations(trials, keyFn, rng) {
   }
 
 function buildSubjectSessions(subjectId) {
-  const seed = SUBJECT_SEEDS[subjectId];
+  const seed = seedForTrialLabel(subjectId);
   const rng = mulberry32(seed);
   console.log(`subject ${subjectId}, seed ${seed}`);
 
