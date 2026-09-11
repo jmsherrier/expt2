@@ -12,6 +12,36 @@ const preCheckEl = document.getElementById('pre-check-screen');
 const subjectEntryEl = document.getElementById('subject-entry');
 const subjectConfirmEl = document.getElementById('subject-confirm');
 const subjectConfirmValueEl = document.getElementById('subject-confirm-value');
+const pauseOverlayEl = document.getElementById('pause-overlay');
+const pauseHintEl = document.createElement('div');
+pauseHintEl.id = 'pause-hint';
+pauseHintEl.textContent = 'Press P to pause';
+document.body.appendChild(pauseHintEl);
+
+let pauseRequested = false;
+let pauseActive = false;
+
+function setPauseHintVisible(visible) {
+  pauseHintEl.style.display = visible ? 'block' : 'none';
+}
+
+document.addEventListener('keydown', function handlePauseKey(event) {
+  if (event.key.toLowerCase() === 'p' && !pauseActive && pauseHintEl.style.display !== 'none') {
+    event.preventDefault();
+    pauseRequested = true;
+    pauseActive = true;
+    pauseOverlayEl.style.display = 'flex';
+    jsPsych.finishTrial();
+    return;
+  }
+
+  if (event.key === ' ' && pauseActive) {
+    event.preventDefault();
+    pauseRequested = false;
+    pauseActive = false;
+    pauseOverlayEl.style.display = 'none';
+  }
+});
 
 // very first screen of the whole page load, shown before the trial label is even entered
 // -- spacebar reveals the subject-id form

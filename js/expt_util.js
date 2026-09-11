@@ -268,6 +268,30 @@ function drawFeedback(canvas, acc, correctColor) {
   }
 }
 
+// Ending the active jsPsych trial lets the timeline replay it from the beginning after a pause.
+// The wrapper is used only around response/stimulus trials, so a replay cannot save duplicate data.
+function makePauseableTrial(trials) {
+  return {
+    timeline: [
+      {
+        timeline: [{
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '',
+          choices: [' '],
+          data: { phase: 'pause_gate' },
+        }],
+        conditional_function: function () { return pauseActive; },
+      },
+      ...(Array.isArray(trials) ? trials : [trials]),
+    ],
+    on_timeline_start: function () {
+      setPauseHintVisible(true);
+    },
+    on_timeline_finish: function () { setPauseHintVisible(false); },
+    loop_function: function () { return pauseRequested; },
+  };
+}
+
 function makeFixationTrial() {
   return {
     type: jsPsychCanvasKeyboardResponse,
@@ -336,6 +360,7 @@ function makeConfidenceTrial(result, onDone) {
     choices: CONFIDENCE_KEYS,
     data: { phase: 'confidence' },
     on_finish: function (data) {
+      if (pauseRequested) return;
       result.conf = Number(data.response);
       result.c_rt = data.rt / 1000;
       if (onDone) onDone();

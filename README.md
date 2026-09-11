@@ -1,6 +1,6 @@
 # WOTO testing experiment
 
-Standalone port of the previous MAFC main experiment, rebuilt around a new condition set.
+Standalone port of the previous MAFC main experiment, rebuilt around new condition set.
 
 ## Design
 
@@ -44,6 +44,10 @@ fields remain in place.
 The output CSV retains the previous fields but adds `duration` immediately after `trial`, so it is
 not byte-for-byte identical to the previous experiment's header. `top` is `counts[0]` and
 `ratio_1..3` are `counts[i] / top`.
+
+During practice and main trials, participants can press `P` to pause. A pause screen asks them to
+minimize paused time and press the spacebar to resume; resuming restarts the current trial from
+the fixation screen. Pausing during confidence does not save a partial response.
 
 ## What changed
 

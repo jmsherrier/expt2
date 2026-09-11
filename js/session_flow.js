@@ -153,12 +153,15 @@ function buildPracticeTimeline(trials, feedback) {
   const nodes = [];
   trials.forEach(trial => {
     const result = {};
-    nodes.push(makeFixationTrial());
-    nodes.push(makeStimulusTrial(trial));
-    nodes.push(makeMaskTrial());
-    nodes.push(makeDecisionTrial(trial, result));
-    nodes.push(makeConfidenceTrial(result));
-    if (feedback) nodes.push(makeFeedbackTrial(trial, result));
+    const trialTimeline = [
+      makeFixationTrial(),
+      makeStimulusTrial(trial),
+      makeMaskTrial(),
+      makeDecisionTrial(trial, result),
+      makeConfidenceTrial(result),
+    ];
+    if (feedback) trialTimeline.push(makeFeedbackTrial(trial, result));
+    nodes.push(makePauseableTrial(trialTimeline));
   });
   return nodes;
 }
@@ -176,14 +179,16 @@ function buildMainTimeline(trials, subjectId, seed, session, sessionData, startI
     }
 
     const result = {};
-    nodes.push(makeFixationTrial());
-    nodes.push(makeStimulusTrial(trial));
-    nodes.push(makeMaskTrial());
-    nodes.push(makeDecisionTrial(trial, result));
-    nodes.push(makeConfidenceTrial(result, function () {
-      sessionData.push(rowToCsvLine(buildTrialInfo(trial, result, subjectId, seed, trialIndex, calibState.gains)));
-      saveSessionData(subjectId, session, sessionData);
-    }));
+    nodes.push(makePauseableTrial([
+      makeFixationTrial(),
+      makeStimulusTrial(trial),
+      makeMaskTrial(),
+      makeDecisionTrial(trial, result),
+      makeConfidenceTrial(result, function () {
+        sessionData.push(rowToCsvLine(buildTrialInfo(trial, result, subjectId, seed, trialIndex, calibState.gains)));
+        saveSessionData(subjectId, session, sessionData);
+      }),
+    ]));
   });
   return nodes;
 }
