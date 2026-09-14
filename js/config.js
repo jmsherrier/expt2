@@ -66,11 +66,8 @@ const COLOR_KEYS = { red: 'h', green: 'j', blue: 'k', yellow: 'l' };
 // response keys for the confidence phase, 1 (low) to 4 (high)
 const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
 
-// stimulus durations are placeholders pending a pilot accuracy curve. This manipulation only has
-// the intended effective viewing-time contrast when the backward mask remains enabled.
+// stimulus durations are placeholders pending a pilot accuracy curve.
 const STIMULUS_DURATIONS = [150, 400];
-const MASK_DURATION = 50;
-const MASK_N_DOTS = 280;
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.

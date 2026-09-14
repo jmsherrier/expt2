@@ -151,22 +151,6 @@ function drawStimulus(canvas, trial) {
   });
 }
 
-// fixed dot count keeps the mask from revealing the numerosity of the stimulus that preceded it;
-// fresh positions and neutral grayscale dots make the flash non-diagnostic on every trial
-function drawMask(canvas) {
-  const ctx = canvas.getContext('2d');
-  const [cx, cy] = canvasCenter(canvas);
-  const pxPerDeg = getPxPerDeg();
-  const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
-
-  generateDotPositions(MASK_N_DOTS, APERTURE_RADIUS_DEG, DOT_RADIUS_DEG).forEach(pos => {
-    ctx.beginPath();
-    ctx.arc(cx + pos[0] * pxPerDeg, cy - pos[1] * pxPerDeg, dotRadiusPx, 0, 2 * Math.PI);
-    ctx.fillStyle = '#808080';
-    ctx.fill();
-  });
-}
-
 // dedicated dot-cloud builder for the color-calibration task: a fixed 4-color, equal-N cloud.
 // returns color labels (not baked-in hex) so a caller can redraw the same fixed positions at
 // different gains -- e.g. color_calibration.js's sliders redraw live while dragging without
@@ -315,17 +299,6 @@ function makeStimulusTrial(trial) {
     choices: 'NO_KEYS',
     trial_duration: trial.duration,
     data: { phase: 'stimulus' },
-  };
-}
-
-function makeMaskTrial() {
-  return {
-    type: jsPsychCanvasKeyboardResponse,
-    canvas_size: getCanvasSize,
-    stimulus: drawMask,
-    choices: 'NO_KEYS',
-    trial_duration: MASK_DURATION,
-    data: { phase: 'mask' },
   };
 }
 

@@ -156,7 +156,6 @@ function buildPracticeTimeline(trials, feedback) {
     const trialTimeline = [
       makeFixationTrial(),
       makeStimulusTrial(trial),
-      makeMaskTrial(),
       makeDecisionTrial(trial, result),
       makeConfidenceTrial(result),
     ];
@@ -182,7 +181,6 @@ function buildMainTimeline(trials, subjectId, seed, session, sessionData, startI
     nodes.push(makePauseableTrial([
       makeFixationTrial(),
       makeStimulusTrial(trial),
-      makeMaskTrial(),
       makeDecisionTrial(trial, result),
       makeConfidenceTrial(result, function () {
         sessionData.push(rowToCsvLine(buildTrialInfo(trial, result, subjectId, seed, trialIndex, calibState.gains)));

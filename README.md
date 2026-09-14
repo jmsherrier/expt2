@@ -66,17 +66,13 @@ empty list. Running the original builder against this design throws
 cycle is now reshuffled whenever every bucket is empty, so each full sweep of 24 permutations is
 used once before any repeats.
 
-**Stimulus duration and backward mask.** Each main and practice trial carries one duration from
+**Stimulus duration.** Each main and practice trial carries one duration from
 `STIMULUS_DURATIONS` (`150` or `400` ms currently). Durations are assigned with the seeded RNG
 after trial construction: each `(n_choice, condition_id, correct_color)` cell is balanced as
 evenly as possible, and session-wide counts are exactly equal when the session size allows it.
-The same balancing rule is applied to practice trials within each condition. Immediately after
-the stimulus, a 50 ms grayscale mask displays 280 newly placed dots. The fixed mask count
-prevents the mask from revealing the stimulus's numerosity, and the mask is necessary for the
-nominal durations to define effective viewing time.
+The same balancing rule is applied to practice trials within each condition.
 
-`STIMULUS_DURATIONS` remains a placeholder pending a pilot accuracy curve. If its levels are
-changed, keep the backward mask enabled so the intended duration manipulation remains valid.
+`STIMULUS_DURATIONS` remains a placeholder pending a pilot accuracy curve.
 
 **Verification artifact.** `verify_durations.js` is a Node-only check and is not loaded by the
 experiment. Run `node verify_durations.js` from the project root to verify session size, global
@@ -123,7 +119,6 @@ short run.
 - `APERTURE_RADIUS_DEG` and `DOT_RADIUS_DEG` are still the original placeholders pending real
   display calibration. Max density here is 280 dots (`[100,80,65,35]`), below the previous
   experiment's, so rejection sampling has room — but the values are still unvalidated.
-- `STIMULUS_DURATIONS = [150, 400]` is still provisional pending a pilot accuracy curve. The
-  duration manipulation assumes the 50 ms grayscale backward mask remains enabled.
+- `STIMULUS_DURATIONS = [150, 400]` is still provisional pending a pilot accuracy curve.
 - Practice pools repeat conditions rather than sampling distinct ones (3 conditions across 20
   trials). Harmless — practice is never saved — but worth a look if you want more variety.
