@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stimulus palette review — numerosity task</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101010; --ink-2:#4a4a4a; --ink-3:#7c7c7c;
+    --paper:#ffffff; --rule:#d6d6d6; --rule-2:#ededed; --fill:#f6f6f6;
+    --col:1060px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:15px; line-height:1.6; font-variant-numeric:tabular-nums;
+  }
+  .wrap{max-width:var(--col); margin:0 auto; padding:0 28px}
+  h1,h2,h3{font-weight:500; line-height:1.25; margin:0}
+  h1{font-size:30px; letter-spacing:-0.01em}
+  h2{font-size:21px; letter-spacing:-0.005em}
+  h3{font-size:16px}
+  p{margin:0 0 14px}
+  .lede{color:var(--ink-2); max-width:62ch}
+  a{color:var(--ink)}
+  :focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+
+  header.masthead{padding:56px 0 28px; border-bottom:1px solid var(--ink)}
+  .masthead .meta{color:var(--ink-3); font-size:13px; margin-top:10px}
+
+  /* ---- control strip ---- */
+  .controls{
+    position:sticky; top:0; z-index:20; background:var(--paper);
+    border-bottom:1px solid var(--rule); padding:12px 0;
+  }
+  .controls .wrap{display:flex; flex-wrap:wrap; gap:18px 26px; align-items:flex-end}
+  .ctl{display:flex; flex-direction:column; gap:5px}
+  .ctl label{font-size:12px; color:var(--ink-3)}
+  select,button,input[type=range]{
+    font:inherit; font-size:14px; color:var(--ink); background:var(--paper);
+    border:1px solid var(--rule); padding:5px 8px;
+  }
+  select{min-width:132px}
+  button{cursor:pointer}
+  button:hover{background:var(--fill)}
+  input[type=range]{padding:0; border:none; width:120px; accent-color:#4a4a4a}
+  input[type=range]:disabled{opacity:.35}
+  .val{font-size:12px; color:var(--ink-3)}
+  .check{flex-direction:row; align-items:center; gap:7px; padding-bottom:6px}
+  .check input{accent-color:#4a4a4a}
+  .check label{font-size:13px; color:var(--ink-2)}
+
+  /* ---- hero ---- */
+  .hero{padding:40px 0 48px; border-bottom:1px solid var(--rule)}
+  .hero h2{margin-bottom:8px}
+  .duel{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:24px}
+  .duel figure{margin:0}
+  .duel-head{margin-bottom:10px}
+  .duel-head select{width:100%; font-size:15px; padding:7px 9px}
+  .sr-only{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+  .duel figcaption{font-size:13px; color:var(--ink-2); margin-top:8px}
+  .verdict{margin-top:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .answer{font-size:14px; color:var(--ink-2); min-height:22px}
+
+  canvas{display:block; width:100%; border:1px solid var(--rule)}
+
+  /* ---- explainer ---- */
+  .explain{padding:42px 0; border-bottom:1px solid var(--rule)}
+  .explain h2{margin-bottom:14px}
+  .explain .cols{display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:22px}
+  .explain figure{margin:0}
+  .explain figcaption{font-size:13px; color:var(--ink-2); margin-top:8px}
+
+  /* ---- plates ---- */
+  .plate{padding:36px 0; border-bottom:1px solid var(--rule-2)}
+  .plate-head{display:flex; justify-content:space-between; align-items:baseline; gap:20px; flex-wrap:wrap}
+  .plate-note{color:var(--ink-2); font-size:14px; max-width:58ch; margin-top:6px}
+  .pick{display:flex; align-items:center; gap:14px; font-size:13px; color:var(--ink-2); white-space:nowrap}
+  .pick label{display:flex; align-items:center; gap:7px}
+  .recommended-bg{font-size:13px; padding:5px 8px; cursor:pointer}
+  .recommended-bg[disabled]{cursor:not-allowed; opacity:.45}
+  .recommended-bg[disabled]:hover{background:var(--paper)}
+  .plate-body{display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:26px; margin-top:20px; align-items:start}
+  .swatches{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap}
+  .sw{flex:1 1 90px; min-width:90px}
+  .sw .chip{height:56px; border:1px solid rgba(0,0,0,.14)}
+  .sw .lab{font-size:11.5px; color:var(--ink-3); margin-top:5px; line-height:1.45}
+  .sw .lab b{font-weight:500; color:var(--ink); display:block}
+
+  table.metrics{width:100%; border-collapse:collapse; font-size:13px}
+  table.metrics th,table.metrics td{text-align:left; padding:5px 0; border-bottom:1px solid var(--rule-2)}
+  table.metrics th{font-weight:400; color:var(--ink-3)}
+  table.metrics td{text-align:right; font-variant-numeric:tabular-nums}
+  .flag{color:var(--ink); border-bottom:1px solid var(--ink); padding-bottom:1px}
+
+  /* ---- summary ---- */
+  .summary{padding:44px 0 20px}
+  table.rank{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:18px}
+  table.rank th{font-weight:500; text-align:right; padding:8px 10px; border-bottom:1px solid var(--ink)}
+  table.rank th:first-child{text-align:left}
+  table.rank td{text-align:right; padding:8px 10px; border-bottom:1px solid var(--rule-2)}
+  table.rank td:first-child{text-align:left}
+  table.rank tr.sel td{background:var(--fill)}
+  .export{margin-top:26px}
+  pre{background:var(--fill); border:1px solid var(--rule); padding:14px; overflow:auto; font-size:12.5px; line-height:1.55}
+  footer{padding:30px 0 70px; color:var(--ink-3); font-size:13px; border-top:1px solid var(--rule); margin-top:30px}
+
+  @media (max-width:860px){
+    .duel,.explain .cols{grid-template-columns:1fr}
+    .plate-body{grid-template-columns:1fr}
+    h1{font-size:25px}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <h1>Stimulus palette review</h1>
+    <p class="lede" style="margin-top:12px">Candidate color sets for the numerosity task, with live dot arrays, perceptual separation metrics, and color-vision simulation. The interface is deliberately achromatic so that nothing induces a contrast shift in the swatches.</p>
+    <div class="meta">Distances are Euclidean in CAM16-UCS. Contrast is Michelson luminance contrast against the background. Viewing conditions: D65, L<sub>A</sub> 4.07 cd/m², Y<sub>b</sub> 20, average surround.</div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="wrap">
+    <div class="ctl">
+      <label for="bgL">Background L* <span class="val" id="bgLVal">25</span></label>
+      <input type="range" id="bgL" min="0" max="100" value="25">
+    </div>
+    <div class="ctl check">
+      <input type="checkbox" id="bgMatch">
+      <label for="bgMatch">Match each set's lightness</label>
+    </div>
+    <div class="ctl">
+      <label for="cvd">Color vision</label>
+      <select id="cvd">
+        <option value="none">Typical trichromat</option>
+        <option value="deutan">Deuteranopia</option>
+        <option value="protan">Protanopia</option>
+        <option value="tritan">Tritanopia</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label for="n">Dots per color <span class="val" id="nVal">22</span></label>
+      <input type="range" id="n" min="6" max="45" value="22">
+    </div>
+    <div class="ctl">
+      <label for="r">Dot radius <span class="val" id="rVal">7 px</span></label>
+      <input type="range" id="r" min="3" max="14" value="7">
+    </div>
+    <div class="ctl">
+      <label for="imb">Count imbalance</label>
+      <select id="imb">
+        <option value="0">Equal counts</option>
+        <option value="0.1">One color +10%</option>
+        <option value="0.2">One color +20%</option>
+        <option value="0.35">One color +35%</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>&nbsp;</label>
+      <button id="reshuffle">Reshuffle arrays</button>
+    </div>
+  </div>
+</div>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="lede">Each field holds the same number of dots of every color, and either field can be swapped to any candidate set. If a set is well balanced, no color should read as the most numerous.</p>
+    <div class="duel">
+      <figure>
+        <div class="duel-head">
+          <label class="sr-only" for="heroSelA">Left field</label>
+          <select id="heroSelA"></select>
+        </div>
+        <canvas id="heroA" data-h="300"></canvas>
+        <figcaption><span id="heroACap"></span></figcaption>
+      </figure>
+      <figure>
+        <div class="duel-head">
+          <label class="sr-only" for="heroSelB">Right field</label>
+          <select id="heroSelB"></select>
+        </div>
+        <canvas id="heroB" data-h="300"></canvas>
+        <figcaption><span id="heroBCap"></span></figcaption>
+      </figure>
+    </div>
+    <div class="verdict">
+      <button id="reveal">Show counts</button>
+      <span class="answer" id="answer"></span>
+    </div>
+  </div>
+</section>
+
+<section class="explain">
+  <div class="wrap">
+    <h2>Background Luminance</h2>
+    <p class="lede">A background at the same lightness as the dots leaves them with no luminance contrast at all, so their edges exist only in the chromatic channel. Chromatic spatial resolution is several times coarser than luminance resolution, which is why isoluminant dots look soft and unstable and are hard to individuate — the same property that makes isoluminance a tool for silencing the magnocellular pathway.</p>
+    <p class="lede">Offsetting the background fixes it. The colors stay equiluminant to one another, which is what keeps salience equal, but every dot now carries the same large luminance contrast against the surround. Both panels below hold the identical Equiluminant 4 set in the identical arrangement; only the surround differs.</p>
+    <div class="cols">
+      <figure>
+        <canvas id="exA" data-h="220"></canvas>
+        <figcaption id="exACap"></figcaption>
+      </figure>
+      <figure>
+        <canvas id="exB" data-h="220"></canvas>
+        <figcaption id="exBCap"></figcaption>
+      </figure>
+    </div>
+    <p class="lede" style="margin-top:22px">Each set's recommended background puts its mean luminance at a Michelson contrast of 0.76, roughly 38 L* below the set itself. Darker would raise the number further — at pure black every contrast tends to 1.00 no matter how dim the dot — but that is an artifact of the measure rather than a real improvement, and it puts the surround on the panel's black floor where the displayed value is least trustworthy. For a set whose colors already share a luminance, any neutral surround equalizes contrast automatically; the recommendation only decides how much.</p>
+  </div>
+</section>
+
+<main id="plates"></main>
+
+<section class="summary">
+  <div class="wrap">
+    <h2>All candidates, side by side</h2>
+    <p class="lede">Minimum separation sets the hardest discrimination in the set. Uniformity is the ratio of the largest pairwise distance to the smallest — 1.00 would mean every pair is equally far apart. Contrast is the range across colors of Michelson luminance contrast against the current background: a wide range means some colors are simply easier to see than others, independent of hue. Thus a small range is ideal.</p>
+    <table class="rank">
+      <thead>
+        <tr><th>Set</th><th>Colors</th><th>Min sep.</th><th>Uniformity</th><th>L* spread</th><th>Chroma spread</th><th>Rec. bg</th><th>Contrast there</th><th>Min sep. deutan</th></tr>
+      </thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+    <div class="export">
+      <h3>Selected set</h3>
+      <p class="lede" style="margin-top:6px">Pick a set above to copy it into the experiment code.</p>
+      <pre id="exportBlock">No set selected.</pre>
+      <button id="copyBtn">Copy to clipboard</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Equiluminant sets were optimized for equal CAM16 lightness and colorfulness with hues spaced as evenly as the sRGB gamut allows, reserving ±7 L* of headroom for the per-subject brightness staircase. Values are nominal sRGB; verify the background and the stimuli on the experiment display with a photometer before collecting data, since the recommendation assumes the panel actually produces the luminance the hex implies.</div>
+</footer>
+
+<script>
+/* ---------- color science ---------- */
+const M16=[[0.401288,0.650173,-0.051461],[-0.250268,1.204414,0.045854],[-0.002079,0.048952,0.953127]];
+const SRGB2XYZ=[[0.4124564,0.3575761,0.1804375],[0.2126729,0.7151522,0.0721750],[0.0193339,0.1191920,0.9503041]];
+const CVD={
+  protan:[[0.152286,1.052583,-0.204868],[0.114503,0.786281,0.099216],[-0.003882,-0.048116,1.051998]],
+  deutan:[[0.367322,0.860646,-0.227968],[0.280085,0.672501,0.047413],[-0.011820,0.042940,0.968881]],
+  tritan:[[1.255528,-0.076749,-0.178779],[-0.078411,0.930809,0.147602],[0.004733,0.691367,0.303900]]
+};
+const mul=(m,v)=>m.map(r=>r[0]*v[0]+r[1]*v[1]+r[2]*v[2]);
+const hexToRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
+const toLin=c=>c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+const toEnc=c=>{const x=Math.max(0,Math.min(1,c));return x<=0.0031308?12.92*x:1.055*Math.pow(x,1/2.4)-0.055;};
+const rgbToHex=r=>'#'+r.map(v=>Math.round(Math.max(0,Math.min(1,v))*255).toString(16).padStart(2,'0')).join('').toUpperCase();
+const rgbToXyz=r=>mul(SRGB2XYZ,r.map(toLin)).map(v=>v*100);
+
+function xyzToLab(xyz){
+  const wp=[95.047,100,108.883], d=6/29;
+  const f=t=>t>d*d*d?Math.cbrt(t):t/(3*d*d)+4/29;
+  const [fx,fy,fz]=xyz.map((v,i)=>f(v/wp[i]));
+  return [116*fy-16,500*(fx-fy),200*(fy-fz)];
+}
+const XYZW=[95.047,100,108.883], LA=(64/Math.PI)*0.2, YB=20, F=1, CSUR=0.69, NCC=1;
+const VC=(()=>{
+  const rgbw=mul(M16,XYZW);
+  const D=Math.min(1,Math.max(0,F*(1-(1/3.6)*Math.exp((-LA-42)/92))));
+  const Dr=rgbw.map(v=>(D*XYZW[1])/v+1-D);
+  const k=1/(5*LA+1);
+  const FL=0.2*k**4*(5*LA)+0.1*(1-k**4)**2*Math.cbrt(5*LA);
+  const n=YB/XYZW[1], z=1.48+Math.sqrt(n), Nbb=0.725*Math.pow(1/n,0.2);
+  const adapt=v=>{const p=Math.pow(FL*Math.abs(v)/100,0.42);return Math.sign(v)*(400*p/(p+27.13))+0.1;};
+  const aw=rgbw.map((v,i)=>adapt(v*Dr[i]));
+  return {Dr,FL,n,z,Nbb,Aw:(2*aw[0]+aw[1]+0.05*aw[2]-0.305)*Nbb,adapt};
+})();
+function xyzToCam16(xyz){
+  const a_=mul(M16,xyz).map((v,i)=>VC.adapt(v*VC.Dr[i]));
+  const [R,G,B]=a_;
+  const a=R-12*G/11+B/11, b=(R+G-2*B)/9;
+  let h=Math.atan2(b,a)*180/Math.PI; if(h<0)h+=360;
+  const et=0.25*(Math.cos(h*Math.PI/180+2)+3.8);
+  const A=(2*R+G+0.05*B-0.305)*VC.Nbb;
+  const J=100*Math.pow(A/VC.Aw,CSUR*VC.z);
+  const t=(50000/13)*NCC*VC.Nbb*et*Math.hypot(a,b)/(R+G+21/20*B);
+  const Cc=Math.pow(t,0.9)*Math.sqrt(J/100)*Math.pow(1.64-Math.pow(0.29,VC.n),0.73);
+  return {J,M:Cc*Math.pow(VC.FL,0.25),h};
+}
+function ucs(hex){
+  const {J,M,h}=xyzToCam16(rgbToXyz(hexToRgb(hex)));
+  const Jp=1.7*J/(1+0.007*J), Mp=Math.log(1+0.0228*M)/0.0228;
+  return [Jp,Mp*Math.cos(h*Math.PI/180),Mp*Math.sin(h*Math.PI/180)];
+}
+function simulate(hex,mode){
+  if(mode==='none')return hex;
+  return rgbToHex(mul(CVD[mode],hexToRgb(hex).map(toLin)).map(toEnc));
+}
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+const lumOf=hex=>rgbToXyz(hexToRgb(hex))[1]/100;
+
+// Michelson rather than Weber: bounded on 0..1, so it stays readable when the background
+// is near black instead of diverging the way a Weber denominator does
+function contrastRange(hexes,bgHex){
+  const yb=lumOf(bgHex);
+  const c=hexes.map(h=>{const y=lumOf(h);return Math.abs(y-yb)/Math.max(y+yb,1e-9);});
+  return [Math.min(...c),Math.max(...c)];
+}
+function fmtContrast(r){
+  return (r[1]-r[0]<0.015)?r[0].toFixed(2):`${r[0].toFixed(2)}–${r[1].toFixed(2)}`;
+}
+
+function stats(hexes){
+  const pts=hexes.map(ucs), d=[];
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++)d.push(dist(pts[i],pts[j]));
+  const cam=hexes.map(h=>xyzToCam16(rgbToXyz(hexToRgb(h))));
+  const L=hexes.map(h=>xyzToLab(rgbToXyz(hexToRgb(h)))[0]);
+  const Ms=cam.map(c=>c.M);
+  const dev=mode=>{
+    const p=hexes.map(h=>ucs(simulate(h,mode))), o=[];
+    for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++)o.push(dist(p[i],p[j]));
+    return Math.min(...o);
+  };
+  return {
+    min:Math.min(...d), max:Math.max(...d), mean:d.reduce((a,b)=>a+b,0)/d.length,
+    ratio:Math.max(...d)/Math.min(...d),
+    Lspread:Math.max(...L)-Math.min(...L), Mspread:Math.max(...Ms)-Math.min(...Ms),
+    meanL:L.reduce((a,b)=>a+b,0)/L.length,
+    deutan:dev('deutan'), protan:dev('protan')
+  };
+}
+const yToL=Y=>Y>Math.pow(6/29,3)?116*Math.cbrt(Y)-16:Y*24389/27;
+function grayForL(L){
+  const Y=Math.pow((L+16)/116,3);
+  return rgbToHex([Y,Y,Y].map(toEnc));
+}
+
+// Solve for the surround that puts the set's mean luminance at TARGET_CONTRAST:
+// Yb = Yd(1-T)/(1+T). Maximising the minimum contrast instead would always answer
+// "pure black", because every Michelson contrast tends to 1 as the surround goes to
+// zero regardless of how dim the dot is -- a property of the measure, not a better
+// stimulus. MIN_L keeps the surround off the panel's black floor, where the luminance
+// actually produced diverges most from the value the hex implies.
+const TARGET_CONTRAST=0.76;
+const MIN_L=8;
+const SPREAD_LIMIT=0.2;
+function recommendedBackground(set){
+  const hexes=Object.values(set.colors);
+  const meanY=hexes.reduce((a,h)=>a+lumOf(h),0)/hexes.length;
+  const l=Math.max(MIN_L,Math.round(yToL(meanY*(1-TARGET_CONTRAST)/(1+TARGET_CONTRAST))));
+  const hex=grayForL(l);
+  const contrast=contrastRange(hexes,hex);
+  // a set whose colors differ in luminance cannot be rescued by any surround: this
+  // records whether the recommendation actually delivers equal contrast or merely the
+  // least bad compromise available
+  return {l,hex,contrast,usable:contrast[1]-contrast[0]<=SPREAD_LIMIT};
+}
+
+/* ---------- candidate sets ---------- */
+const SETS=[
+  {id:'current', name:'Current palette', n:4,
+   note:'Full-intensity sRGB primaries. Luminance runs from 7% (blue) to 93% (yellow), and yellow sits only 31° from green in CAM16 hue while green and blue are 141° apart.',
+   colors:{red:'#FF0000',green:'#00FF00',blue:'#0000FF',yellow:'#FFFF00'}},
+
+  {id:'current75', name:'Current palette at 0.75 gain', n:4,
+   note:'What subjects actually see at the staircase start point. Because the gain multiplies gamma-encoded values, this is a 50% luminance reduction rather than 25%, and it leaves the relative spacing untouched.',
+   colors:{red:'#BF0000',green:'#00BF00',blue:'#0000BF',yellow:'#BFBF00'}},
+
+  {id:'eq3', name:'Equiluminant 3', n:3,
+   note:'For three-choice blocks. Equal CAM16 lightness and colorfulness, hues 117° apart, with staircase headroom reserved. It sits about 15 L* below the four- and five-color sets, so it needs its own darker surround unless it is regenerated to match them.',
+   colors:{red:'#C14539',green:'#2C8B26',blue:'#316EE3'}},
+
+  {id:'eq4', name:'Equiluminant 4', n:4,
+   note:'For four-choice blocks. The proposed replacement for the current set.',
+   colors:{orange:'#D78426',green:'#56B16E',blue:'#40A4E4',magenta:'#CA79C4'}},
+
+  {id:'eq5', name:'Equiluminant 5', n:5,
+   note:'For five-choice blocks. Minimum separation is necessarily lower — five hues have to share the same fixed-lightness slice of the gamut.',
+   colors:{salmon:'#E47B6B',olive:'#B49D27',teal:'#3EB48F',blue:'#50A6E1',purple:'#B886D8'}},
+
+  {id:'vivid4', name:'Vivid 4, no headroom', n:4,
+   note:'Same construction as Equiluminant 4 but pushed to maximum chroma. More saturated, at the cost of the gamut room the brightness staircase needs to move in both directions.',
+   colors:{orange:'#EC8A12',green:'#50BF6E',blue:'#14B1FD',magenta:'#DC7DD9'}},
+
+  {id:'okabe4', name:'Okabe–Ito 4', n:4,
+   note:'A widely cited colorblind-friendly set, included as a reference point. It was designed for figures, where lightness differences help rather than hurt, so it is not luminance controlled.',
+   colors:{orange:'#E69F00',sky:'#56B4E9',bluishgreen:'#009E73',reddishpurple:'#CC79A7'}},
+
+  {id:'tol4', name:'Tol bright 4', n:4,
+   note:'Another published qualitative set, same caveat: built for legibility in plots, not for equal salience in a counting task.',
+   colors:{blue:'#4477AA',red:'#EE6677',green:'#228833',yellow:'#CCBB44'}},
+
+  {id:'cvd4', name:'Dichromat-robust 4', n:4,
+   note:'Optimized to stay separable for typical, deuteranopic and protanopic observers simultaneously. It achieves that only by using enormous lightness differences, which is exactly the confound the task must avoid. Included to show the trade-off is real rather than a matter of tuning.',
+   colors:{pale:'#ADBCFF',navy:'#1F0DB5',brown:'#7A5200',yellow:'#FFFF25'}}
+];
+
+/* ---------- seeded scatter ---------- */
+let seed=20260914;
+function rng(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+// every dot must land somewhere -- a field that silently drops dots would report counts
+// it isn't actually showing, which is the one thing this page must not do. when the
+// requested spacing can't accommodate the count, the separation relaxes until it fits
+function scatter(w,h,items,rad){
+  const pts=[], pad=rad+3;
+  let sep=rad*2+5;
+  for(const it of items){
+    let placed=false;
+    while(!placed){
+      const minD=sep*sep;
+      for(let a=0;a<240;a++){
+        const x=pad+rng()*(w-2*pad), y=pad+rng()*(h-2*pad);
+        if(pts.every(p=>(p.x-x)**2+(p.y-y)**2>minD)){pts.push({x,y,c:it});placed=true;break;}
+      }
+      if(!placed){
+        if(sep>rad*0.9){sep*=0.88;}
+        else{pts.push({x:pad+rng()*(w-2*pad),y:pad+rng()*(h-2*pad),c:it});placed=true;}
+      }
+    }
+  }
+  return pts;
+}
+function buildItems(set,per,imb,pickIdx){
+  const names=Object.keys(set.colors), out=[];
+  names.forEach((nm,i)=>{
+    const k=i===pickIdx?Math.round(per*(1+imb)):per;
+    for(let q=0;q<k;q++)out.push(nm);
+  });
+  for(let i=out.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[out[i],out[j]]=[out[j],out[i]];}
+  return out;
+}
+
+// the background is either pinned to an absolute lightness -- the default, and the only
+// way two sets can be judged against the same surround -- or matched to the set's own
+// mean, which drives luminance contrast to zero and is kept to demonstrate that failure
+function bgFor(set,o){
+  return o.bgMatch ? grayForL(stats(Object.values(set.colors)).meanL) : grayForL(o.bgL);
+}
+
+function paint(canvas,set,opts){
+  const dpr=window.devicePixelRatio||1;
+  // the display height lives in data-h, never in the height attribute: assigning
+  // canvas.height writes that attribute, so reading it back would compound by the device
+  // pixel ratio on every render and the field would grow downwards each time
+  const w=canvas.clientWidth||480, h=+canvas.dataset.h;
+  canvas.style.height=h+'px';
+  canvas.width=Math.round(w*dpr); canvas.height=Math.round(h*dpr);
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+  const bg=opts.bgOverride||bgFor(set,opts);
+  ctx.fillStyle=simulate(bg,opts.cvd); ctx.fillRect(0,0,w,h);
+  const items=buildItems(set,opts.per,opts.imb,opts.pickIdx);
+  for(const p of scatter(w,h,items,opts.rad)){
+    ctx.beginPath(); ctx.arc(p.x,p.y,opts.rad,0,Math.PI*2);
+    ctx.fillStyle=simulate(set.colors[p.c],opts.cvd); ctx.fill();
+  }
+}
+
+/* ---------- rendering ---------- */
+const $=id=>document.getElementById(id);
+let selected=null;
+
+function plateMarkup(set){
+  const hexes=Object.values(set.colors), st=stats(hexes);
+  const rec=recommendedBackground(set);
+  const sw=Object.entries(set.colors).map(([nm,hx])=>{
+    const cam=xyzToCam16(rgbToXyz(hexToRgb(hx)));
+    const L=xyzToLab(rgbToXyz(hexToRgb(hx)))[0];
+    return `<div class="sw"><div class="chip" data-hex="${hx}"></div>
+      <div class="lab"><b>${nm}</b>${hx}<br>L* ${L.toFixed(1)} · h ${cam.h.toFixed(0)}° · M ${cam.M.toFixed(0)}</div></div>`;
+  }).join('');
+  const flag=(v,bad)=>v>bad?`<span class="flag">${v.toFixed(1)}</span>`:v.toFixed(1);
+  const recCell=rec.usable
+    ? `L* ${rec.l} · ${rec.hex}`
+    : `<span class="flag">L* ${rec.l} · ${rec.hex}</span>`;
+  const recBtn=rec.usable
+    ? `<button type="button" class="recommended-bg" data-bg-l="${rec.l}">Use recommended background (L* ${rec.l})</button>`
+    : `<button type="button" class="recommended-bg" data-bg-l="${rec.l}" title="No surround equalizes contrast for this set; ${fmtContrast(rec.contrast)} is the spread at L* ${rec.l}.">Best available background (L* ${rec.l})</button>`;
+  return `<section class="plate" id="plate-${set.id}">
+    <div class="wrap">
+      <div class="plate-head">
+        <div>
+          <h2>${set.name}</h2>
+          <div class="plate-note">${set.note}</div>
+        </div>
+        <div class="pick">
+          ${recBtn}
+          <label><input type="radio" name="choice" value="${set.id}"> Use this set</label>
+        </div>
+      </div>
+      <div class="plate-body">
+        <div>
+          <div class="swatches">${sw}</div>
+          <canvas data-set="${set.id}" data-h="240"></canvas>
+        </div>
+        <table class="metrics">
+          <tr><th>Colors</th><td>${hexes.length}</td></tr>
+          <tr><th>Minimum separation</th><td>${st.min.toFixed(1)}</td></tr>
+          <tr><th>Mean separation</th><td>${st.mean.toFixed(1)}</td></tr>
+          <tr><th>Uniformity (max/min)</th><td>${st.ratio.toFixed(2)}</td></tr>
+          <tr><th>L* spread</th><td>${flag(st.Lspread,8)}</td></tr>
+          <tr><th>Colorfulness spread</th><td>${flag(st.Mspread,10)}</td></tr>
+          <tr><th>Recommended background</th><td>${recCell}</td></tr>
+          <tr><th>Contrast there</th><td>${fmtContrast(rec.contrast)}</td></tr>
+          <tr><th>Current background</th><td data-bghex="${set.id}">—</td></tr>
+          <tr><th>Contrast there</th><td data-contrast="${set.id}">—</td></tr>
+          <tr><th>Min sep., deuteranopia</th><td>${st.deutan.toFixed(1)}</td></tr>
+          <tr><th>Min sep., protanopia</th><td>${st.protan.toFixed(1)}</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>`;
+}
+
+$('plates').innerHTML=SETS.map(plateMarkup).join('');
+
+function rankRows(o){
+  $('rankBody').innerHTML=SETS.map(s=>{
+    const hexes=Object.values(s.colors), st=stats(hexes);
+    const rec=recommendedBackground(s);
+    const recTxt=rec.usable?`L* ${rec.l}`:`<span class="flag">L* ${rec.l}</span>`;
+    return `<tr class="${selected===s.id?'sel':''}"><td>${s.name}</td><td>${hexes.length}</td>
+      <td>${st.min.toFixed(1)}</td><td>${st.ratio.toFixed(2)}</td><td>${st.Lspread.toFixed(1)}</td>
+      <td>${st.Mspread.toFixed(1)}</td><td>${recTxt}</td><td>${fmtContrast(rec.contrast)}</td>
+      <td>${st.deutan.toFixed(1)}</td></tr>`;
+  }).join('');
+}
+
+function opts(){
+  return {
+    bgL:+$('bgL').value, bgMatch:$('bgMatch').checked, cvd:$('cvd').value,
+    per:+$('n').value, rad:+$('r').value, imb:+$('imb').value
+  };
+}
+let heroPick=[null,null];
+let renderStartSeed=seed;
+let renderEndSeed=seed;
+
+// the two hero fields are independently switchable so any pair can be argued side by side.
+// defaults open on the current palette against Tol bright 4, so the first thing anyone
+// sees is the set in use today next to a familiar published alternative
+['heroSelA','heroSelB'].forEach(id=>{
+  $(id).innerHTML=SETS.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+});
+$('heroSelA').value='current';
+$('heroSelB').value='tol4';
+
+function heroSets(){
+  return [SETS.find(s=>s.id===$('heroSelA').value), SETS.find(s=>s.id===$('heroSelB').value)];
+}
+
+// if the two fields hold different numbers of colors the total dot count differs too, which
+// is a numerosity cue in its own right -- say so rather than let it pass unnoticed
+function heroCap(set,o){
+  const k=Object.keys(set.colors).length;
+  const total=k*o.per+(o.imb>0?Math.round(o.per*o.imb):0);
+  const cr=contrastRange(Object.values(set.colors),bgFor(set,o));
+  return `${k} colors · ${total} dots · contrast ${fmtContrast(cr)}`;
+}
+
+// the explainer pair is always Equiluminant 4 with the seed rewound between panels, so the
+// two fields are pixel-identical apart from the surround
+function paintExplainer(o){
+  const set=SETS.find(s=>s.id==='eq4');
+  const matched='#9A9A9A', offset='#444444';
+  const hold=seed;
+  paint($('exA'),set,{...o,imb:0,pickIdx:-1,bgOverride:matched});
+  seed=hold;
+  paint($('exB'),set,{...o,imb:0,pickIdx:-1,bgOverride:offset});
+  $('exACap').textContent='Surround matched to the set, #9A9A9A — contrast 0.01–0.03';
+  $('exBCap').textContent='Surround at L* 29, #444444 — contrast 0.68–0.71';
+}
+
+function renderAll(preserveArrays=false){
+  const startSeed=preserveArrays?renderStartSeed:seed;
+  const priorEndSeed=renderEndSeed;
+  seed=startSeed;
+  const o=opts();
+  $('bgL').disabled=o.bgMatch;
+  document.querySelectorAll('.recommended-bg').forEach(b=>{b.disabled=o.bgMatch;});
+  document.querySelectorAll('.chip').forEach(el=>{
+    el.style.background=simulate(el.dataset.hex,o.cvd);
+  });
+  document.querySelectorAll('canvas[data-set]').forEach(cv=>{
+    const set=SETS.find(s=>s.id===cv.dataset.set);
+    const k=Object.keys(set.colors).length;
+    paint(cv,set,{...o,pickIdx:o.imb>0?Math.floor(rng()*k):-1});
+  });
+  document.querySelectorAll('[data-contrast]').forEach(td=>{
+    const set=SETS.find(s=>s.id===td.dataset.contrast);
+    const cr=contrastRange(Object.values(set.colors),bgFor(set,o));
+    const txt=fmtContrast(cr);
+    td.innerHTML=(cr[0]<0.05||cr[1]-cr[0]>SPREAD_LIMIT)?`<span class="flag">${txt}</span>`:txt;
+  });
+  document.querySelectorAll('[data-bghex]').forEach(td=>{
+    td.textContent=bgFor(SETS.find(s=>s.id===td.dataset.bghex),o);
+  });
+  const [a,b]=heroSets();
+  heroPick=[
+    o.imb>0?Math.floor(rng()*Object.keys(a.colors).length):-1,
+    o.imb>0?Math.floor(rng()*Object.keys(b.colors).length):-1
+  ];
+  paint($('heroA'),a,{...o,pickIdx:heroPick[0]});
+  paint($('heroB'),b,{...o,pickIdx:heroPick[1]});
+  $('heroACap').textContent=heroCap(a,o);
+  $('heroBCap').textContent=heroCap(b,o);
+  paintExplainer(o);
+  $('answer').textContent='';
+  rankRows(o);
+  if(preserveArrays){
+    seed=priorEndSeed;
+  }else{
+    renderStartSeed=startSeed;
+    renderEndSeed=seed;
+  }
+}
+
+$('reveal').addEventListener('click',()=>{
+  const o=opts();
+  if(o.imb===0){
+    $('answer').textContent=`Both fields hold ${o.per} dots of every color. There is no most numerous color.`;
+    return;
+  }
+  const [sa,sb]=heroSets();
+  const a=Object.keys(sa.colors)[heroPick[0]], b=Object.keys(sb.colors)[heroPick[1]];
+  $('answer').textContent=`Left (${sa.name}): ${a} is most numerous. Right (${sb.name}): ${b} is most numerous. Every other color has ${o.per} dots.`;
+});
+
+// changing the surround, the simulated vision, or which sets are paired must not reshuffle
+// the arrays -- the whole point is to compare the same dots under a changed condition.
+// passed explicitly rather than relying on the event object arriving as a truthy argument
+['cvd','heroSelA','heroSelB'].forEach(id=>$(id).addEventListener('change',()=>renderAll(true)));
+$('imb').addEventListener('change',()=>renderAll());
+$('bgMatch').addEventListener('change',()=>renderAll(true));
+$('bgL').addEventListener('input',e=>{$('bgLVal').textContent=e.target.value; renderAll(true);});
+$('plates').addEventListener('click',e=>{
+  const button=e.target.closest('.recommended-bg');
+  if(!button||button.disabled)return;
+  $('bgMatch').checked=false;
+  $('bgL').value=button.dataset.bgL;
+  $('bgLVal').textContent=button.dataset.bgL;
+  renderAll(true);
+});
+$('n').addEventListener('input',e=>{$('nVal').textContent=e.target.value; renderAll();});
+$('r').addEventListener('input',e=>{$('rVal').textContent=e.target.value+' px'; renderAll();});
+$('reshuffle').addEventListener('click',()=>{seed=(Date.now()>>>0); renderAll();});
+
+document.addEventListener('change',e=>{
+  if(e.target.name!=='choice')return;
+  selected=e.target.value;
+  const o=opts();
+  const set=SETS.find(s=>s.id===selected);
+  const hexes=Object.values(set.colors), st=stats(hexes);
+  const bg=bgFor(set,o), cr=contrastRange(hexes,bg);
+  const rec=recommendedBackground(set);
+  const body=Object.entries(set.colors)
+    .map(([nm,hx])=>`  ${nm}: '${hx}',`).join('\n');
+  const warn=rec.usable?'':`\n// warning: this set's colors differ in luminance, so no surround gives them
+// equal contrast -- ${fmtContrast(rec.contrast)} is the spread at the best available background`;
+  $('exportBlock').textContent =
+`// ${set.name} — min separation ${st.min.toFixed(1)}, uniformity ${st.ratio.toFixed(2)}
+// recommended background L* ${rec.l} (${rec.hex}), contrast ${fmtContrast(rec.contrast)}
+// currently previewing on ${bg}, contrast ${fmtContrast(cr)}${warn}
+const BACKGROUND = '${rec.hex}';
+const COLORS = {
+${body}
+};`;
+  rankRows(o);
+});
+
+$('copyBtn').addEventListener('click',()=>{
+  navigator.clipboard.writeText($('exportBlock').textContent).then(()=>{
+    $('copyBtn').textContent='Copied';
+    setTimeout(()=>{$('copyBtn').textContent='Copy to clipboard';},1400);
+  });
+});
+
+window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(()=>renderAll(true),150);});
+renderAll();
+</script>
+</body>
+</html>
