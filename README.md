@@ -129,11 +129,24 @@ Copy the folder to a PHP-capable web root and open `index.html` over `http(s)://
 the web server user can write to the folder. Then check `data/` for the two CSV files after a
 short run.
 
+## Duration pilot
+
+`duration-pilot.html` is a standalone, single-subject instrument for the accuracy/confidence-vs-
+duration curve `STIMULUS_DURATIONS` is still waiting on. It reuses the same chinrest calibration,
+dot-cloud rendering, HJKL response and confidence rating as the main task, but holds difficulty
+fixed at one moderate 4-choice condition (`[100,80,50,50]`) and sweeps `PILOT_DURATIONS`
+(currently `[50,100,150,250,400,600]` ms, 15 reps each — 90 trials, ~10 minutes) so duration is
+the only thing varying. No feedback, no practice, no server save: it downloads its own small CSV
+(`duration,colors,counts,correct_color,resp,acc,rt,conf,c_rt`) client-side at the end via a
+button click. It is not wired into `index.html`/`session_flow.js` and doesn't share a CSV schema
+with the main study — open `duration-pilot.html` directly. Once real per-duration accuracy/
+confidence is in hand, update `STIMULUS_DURATIONS` in `js/config.js` accordingly.
+
 ## Not yet addressed
 
 - `APERTURE_RADIUS_DEG` and `DOT_RADIUS_DEG` are still the original placeholders pending real
   display calibration. Max density here is 280 dots (`[100,80,65,35]`), below the previous
   experiment's, so rejection sampling has room — but the values are still unvalidated.
-- `STIMULUS_DURATIONS = [150, 400]` is still provisional pending a pilot accuracy curve.
+- `STIMULUS_DURATIONS = [150, 400]` is still provisional pending the duration pilot above.
 - Practice pools repeat conditions rather than sampling distinct ones (3 conditions across 20
   trials). Harmless — practice is never saved — but worth a look if you want more variety.
