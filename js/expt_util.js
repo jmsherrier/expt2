@@ -125,7 +125,7 @@ function drawFixation(canvas) {
   const ctx = canvas.getContext('2d');
   const [cx, cy] = canvasCenter(canvas);
   const pxPerDeg = getPxPerDeg();
-  ctx.strokeStyle = 'black';
+  ctx.strokeStyle = 'white';
   ctx.lineWidth = 4;
   [0.25, 0.5].forEach(rDeg => {
     ctx.beginPath();
@@ -193,7 +193,7 @@ function drawPrompt(canvas, text, yOffsetDeg = 4 * VISUAL_ANGLE_SCALE) {
   const ctx = canvas.getContext('2d');
   const [cx, cy] = canvasCenter(canvas);
   const pxPerDeg = getPxPerDeg();
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = 'white';
   ctx.font = `${24 * VISUAL_ANGLE_SCALE}px Avenir Next, sans-serif`;
   ctx.textAlign = 'center';
   ctx.fillText(text, cx, cy - yOffsetDeg * pxPerDeg);
@@ -224,7 +224,7 @@ function drawColorLegend(canvas, validColors, yOffsetDeg = 5 * VISUAL_ANGLE_SCAL
     const y = cy + yOffsetDeg * pxPerDeg;
 
     ctx.fillStyle = validColors.includes(color) ? colorMap[color] : UNAVAILABLE_LEGEND_COLOR;
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = 'white';
     ctx.fillRect(x - rectWidthPx / 2, y - rectHeightPx / 2, rectWidthPx, rectHeightPx);
     ctx.strokeRect(x - rectWidthPx / 2, y - rectHeightPx / 2, rectWidthPx, rectHeightPx);
 

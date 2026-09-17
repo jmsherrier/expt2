@@ -10,13 +10,13 @@
 // dots" question has an obvious answer, well outside any real condition's difficulty range (the
 // closest real condition is [100, 60, 60, 60]). the top count matches this design's real top of
 // 100 so the illustration's density is representative
-const INSTRUCTION_FULL_TRIAL = { n_choice: 4, colors: COLOR_NAMES, counts: [100, 25, 25, 25], correct_color: 'red' };
+const INSTRUCTION_FULL_TRIAL = { n_choice: 4, colors: COLOR_NAMES, counts: [100, 25, 25, 25], correct_color: 'orange' };
 
 // same illustrative trial restricted to 3 colors, to demonstrate the greyed-out legend shown on
 // n_choice < 4 trials. this experiment has no two-choice conditions, so the partial example is
 // 3-choice (the previous experiment's was 2-choice) -- showing a 2-color example here would
 // advertise a trial type the subject will never actually see
-const INSTRUCTION_PARTIAL_TRIAL = { n_choice: 3, colors: ['red', 'green', 'blue'], counts: [100, 25, 25], correct_color: 'red' };
+const INSTRUCTION_PARTIAL_TRIAL = { n_choice: 3, colors: ['orange', 'green', 'blue'], counts: [100, 25, 25], correct_color: 'orange' };
 
 // draws one illustrative trial's dot cloud, scaled to PREVIEW_SCALE like color_calibration.js's
 // drawStimulusPreview, but colored via the resolved ACTIVE_COLORS palette rather than a
@@ -45,7 +45,7 @@ function drawInstructionLegend(ctx, cx, cy, validColors) {
   COLOR_NAMES.forEach((color, i) => {
     const x = cx + legendXDeg[i] * pxPerDeg;
     ctx.fillStyle = validColors.includes(color) ? ACTIVE_COLORS[color] : UNAVAILABLE_LEGEND_COLOR;
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = 'white';
     ctx.fillRect(x - rectWidthPx / 2, cy - rectHeightPx / 2, rectWidthPx, rectHeightPx);
     ctx.strokeRect(x - rectWidthPx / 2, cy - rectHeightPx / 2, rectWidthPx, rectHeightPx);
 
@@ -100,7 +100,7 @@ function buildConfidencePreviewImage() {
   canvas.height = heightPx;
 
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = 'white';
   ctx.font = `${24 * VISUAL_ANGLE_SCALE * PREVIEW_SUPERSAMPLE}px Avenir Next, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

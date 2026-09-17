@@ -61,7 +61,7 @@ const DOT_RADIUS_DEG = 0.15 * VISUAL_ANGLE_SCALE;
 
 // response keys for the decision phase, one key per color -- unchanged, so a subject who has run
 // the previous experiment keeps the same motor mapping
-const COLOR_KEYS = { red: 'h', green: 'j', blue: 'k', yellow: 'l' };
+const COLOR_KEYS = { orange: 'h', green: 'j', blue: 'k', magenta: 'l' };
 
 // response keys for the confidence phase, 1 (low) to 4 (high)
 const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
@@ -71,7 +71,7 @@ const STIMULUS_DURATIONS = [150, 400];
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.
-const CSV_HEADER = 'date,time,sid,seed,gain_red,gain_green,gain_blue,gain_yellow,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt';
+const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_magenta,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt';
 
 // color-matching calibration: 4 sliders (one per color), each dims that color's full-saturation
 // hex down toward black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed. no
@@ -83,7 +83,7 @@ const CALIBRATION_FLOOR = 0.20;
 const CALIBRATION_DOTS_PER_COLOR = 80;
 const N_COLOR_CALIBRATION_REPS = 2;
 
-const COLOR_CSV_HEADER = 'date,time,sid,seed,trial,gain_red,gain_green,gain_blue,gain_yellow';
+const COLOR_CSV_HEADER = 'date,time,sid,seed,trial,gain_orange,gain_green,gain_blue,gain_magenta';
 
 // shown before the virtual chinrest. this study is a single session, so the "returning" variant
 // is currently unreachable -- it's kept (and still selected by the same isFirstSession flag) so

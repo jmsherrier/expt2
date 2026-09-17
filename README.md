@@ -66,6 +66,21 @@ empty list. Running the original builder against this design throws
 cycle is now reshuffled whenever every bucket is empty, so each full sweep of 24 permutations is
 used once before any repeats.
 
+**Color palette.** `js/colors.js` now ships the Equiluminant 4 set (see
+`palette-review-final.html`) in place of the old full-saturation RGBY primaries: orange
+`#D78426`, green `#56B16E`, blue `#40A4E4`, magenta `#CA79C4`, equal in CAM16 lightness and
+colorfulness. The page background (`style.css`, all three background-color rules) moved from
+mid-grey `rgb(127,127,127)` to `#3B3B3B` (L* 25), the set's recommended surround at Michelson
+contrast 0.76 — without an offset background these equiluminant colors would carry almost no
+luminance contrast against a mid-grey field. Canvas ink that used to be plain `black`
+(fixation cross, prompt text, legend borders, confidence-preview text) is now `white` so it
+stays legible against the darker surround; the `black` on the four legend/HJKL key labels is
+unchanged since those sit on top of the (still light, L*~62-65) color swatches, not the page
+background. `red`→`orange` and `yellow`→`magenta` throughout (COLOR_NAMES, COLOR_KEYS,
+COLOR_CODES, gain columns in both CSV headers, `progress.php`'s `$colorColumns`) since the old
+names no longer describe what's on screen and `drawFeedback` shows the literal color name to
+subjects.
+
 **Stimulus duration.** Each main and practice trial carries one duration from
 `STIMULUS_DURATIONS` (`150` or `400` ms currently). Durations are assigned with the seeded RNG
 after trial construction: each `(n_choice, condition_id, correct_color)` cell is balanced as

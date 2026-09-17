@@ -1,24 +1,24 @@
-// standard RGB hex codes, will be replaced with matched values from the color-matching procedure
-// later -- same placeholder values as util/colors.py
+// Equiluminant 4 palette (see palette-review-final.html) -- equal CAM16 lightness and
+// colorfulness, hues spaced evenly, replacing the old full-saturation RGBY primaries
 const COLORS = {
-  red: '#FF0000',
-  green: '#00FF00',
-  blue: '#0000FF',
-  yellow: '#FFFF00',
+  orange: '#D78426',
+  green: '#56B16E',
+  blue: '#40A4E4',
+  magenta: '#CA79C4',
 };
 
-// numeric codes for raw data output, RGBY = 1,2,3,4, keeps color columns text-free
+// numeric codes for raw data output, keeps color columns text-free
 const COLOR_CODES = {
-  red: 1,
+  orange: 1,
   green: 2,
   blue: 3,
-  yellow: 4,
+  magenta: 4,
 };
 
-// insertion order (red, green, blue, yellow) matters -- it feeds the permutation generator below
+// insertion order (orange, green, blue, magenta) matters -- it feeds the permutation generator below
 const COLOR_NAMES = Object.keys(COLORS);
 
-// 'red' -> 'Red', for subject-facing text -- COLOR_NAMES/correct_color are always lowercase
+// 'orange' -> 'Orange', for subject-facing text -- COLOR_NAMES/correct_color are always lowercase
 // internally, so every screen that names a color in prose (instructions, feedback) goes through this
 function capitalizeColorName(color) {
   return color.charAt(0).toUpperCase() + color.slice(1);
@@ -36,14 +36,12 @@ function applyGain(hex, gain) {
   return `#${toHex(clamp(r))}${toHex(clamp(g))}${toHex(clamp(b))}`;
 }
 
-// per-color multiplier applied on top of the base COLORS palette -- 1.0 means unadjusted. every
-// base COLORS hex is already fully saturated (one channel at 255, the rest at 0), so a gain above
-// 1.0 is a no-op: clamp can't push a maxed channel any higher, and a 0 channel stays 0 regardless
-// of the multiplier. starting the staircase AT 1.0 would leave step-ups with nothing to do, so
-// instead it starts at 75% of full intensity, leaving genuine headroom to move a color brighter or
-// dimmer
+// per-color multiplier applied on top of the base COLORS palette -- 1.0 means unadjusted. the
+// calibration slider only ever runs 0..1 (CALIBRATION_FLOOR..1 in config.js), so gain never
+// exceeds 1.0 in practice. starting the staircase at 75% leaves headroom to move a color both
+// brighter and dimmer during matching
 const DEFAULT_START_GAIN = 0.75;
-const DEFAULT_COLOR_GAINS = { red: DEFAULT_START_GAIN, green: DEFAULT_START_GAIN, blue: DEFAULT_START_GAIN, yellow: DEFAULT_START_GAIN };
+const DEFAULT_COLOR_GAINS = { orange: DEFAULT_START_GAIN, green: DEFAULT_START_GAIN, blue: DEFAULT_START_GAIN, magenta: DEFAULT_START_GAIN };
 
 function getGainedColors(gains) {
   const gained = {};

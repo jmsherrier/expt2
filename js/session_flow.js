@@ -1,7 +1,7 @@
 function rowToCsvLine(row) {
   const fields = [
     row.date, row.time, row.sid, row.seed,
-    row.gain_red, row.gain_green, row.gain_blue, row.gain_yellow,
+    row.gain_orange, row.gain_green, row.gain_blue, row.gain_magenta,
     row.session, row.trial, row.duration,
     row.n_choice, row.condition_id, row.top, row.ratio_1, row.ratio_2, row.ratio_3,
     `[${row.colors.join(',')}]`, `[${row.counts.join(',')}]`,
@@ -21,7 +21,7 @@ function buildTrialInfo(trial, result, subjectId, seed, trialIndex, gains) {
   return {
     date: formatDate(now), time: formatTime(now),
     sid: subjectId, seed: seed,
-    gain_red: gains.red, gain_green: gains.green, gain_blue: gains.blue, gain_yellow: gains.yellow,
+    gain_orange: gains.orange, gain_green: gains.green, gain_blue: gains.blue, gain_magenta: gains.magenta,
     session: trial.session, trial: trialIndex, duration: trial.duration,
     n_choice: trial.n_choice, condition_id: trial.condition_id, top: trial.top,
     ratio_1: ratios[0] ?? '', ratio_2: ratios[1] ?? '', ratio_3: ratios[2] ?? '',

@@ -1,6 +1,6 @@
-/* neutral grey background, mirrors the pilot's psychopy window color */
+/* Equiluminant 4's recommended background, L* 25 -- see palette-review-final.html */
 html, body {
-  background-color: rgb(127, 127, 127);
+  background-color: #3B3B3B;
   margin: 0;
   padding: 0;
   height: 100%;
@@ -8,7 +8,7 @@ html, body {
      overflow is a sizing bug, not something to scroll past */
   overflow: hidden;
   font-family: 'Avenir Next', sans-serif;
-  color: black;
+  color: white;
 }
 
 #pre-check-screen {
@@ -66,7 +66,7 @@ html, body {
 
 #jspsych-target,
 .jspsych-display-element {
-  background-color: rgb(127, 127, 127);
+  background-color: #3B3B3B;
   height: 100vh;
   width: 100vw;
   margin: 0;
@@ -91,7 +91,7 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: rgb(127, 127, 127);
+  background-color: #3B3B3B;
   font-size: calc(24px * var(--text-scale));
   text-align: center;
 }

@@ -22,7 +22,7 @@ function renderPreviewImage(widthPx, heightPx, drawFn) {
 // (buildCalibrationDotCloud) and real degree-based sizes as the actual calibration stimulus, just
 // scaled down to PREVIEW_SCALE of its real on-screen size
 function drawStimulusPreview(ctx, cx, cy) {
-  const gains = { red: PREVIEW_GAIN, green: PREVIEW_GAIN, blue: PREVIEW_GAIN, yellow: PREVIEW_GAIN };
+  const gains = { orange: PREVIEW_GAIN, green: PREVIEW_GAIN, blue: PREVIEW_GAIN, magenta: PREVIEW_GAIN };
   const gainedColors = getGainedColors(gains);
   const pxPerDeg = getPxPerDeg() * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE;
   const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
@@ -47,7 +47,7 @@ function buildStimulusPreviewScreen() {
 
 // final per-color gain is the average of the confirmed slider settings across every rep
 function computeAverageGains(repGains) {
-  const sums = { red: 0, green: 0, blue: 0, yellow: 0 };
+  const sums = { orange: 0, green: 0, blue: 0, magenta: 0 };
   repGains.forEach(g => COLOR_NAMES.forEach(c => { sums[c] += g[c]; }));
   const n = repGains.length;
   const avg = {};
@@ -60,14 +60,14 @@ function buildColorTrialInfo(gains, subjectId, seed, trialIndex) {
   return {
     date: formatDate(now), time: formatTime(now),
     sid: subjectId, seed: seed, trial: trialIndex,
-    gain_red: gains.red, gain_green: gains.green, gain_blue: gains.blue, gain_yellow: gains.yellow,
+    gain_orange: gains.orange, gain_green: gains.green, gain_blue: gains.blue, gain_magenta: gains.magenta,
   };
 }
 
 function colorRowToCsvLine(row) {
   const fields = [
     row.date, row.time, row.sid, row.seed, row.trial,
-    row.gain_red, row.gain_green, row.gain_blue, row.gain_yellow,
+    row.gain_orange, row.gain_green, row.gain_blue, row.gain_magenta,
   ];
   return fields.map(csvField).join(',');
 }
@@ -90,7 +90,7 @@ function deriveColorCalibrationState(colorRows) {
   }
 
   const repGains = colorRows.map(r => ({
-    red: Number(r.gain_red), green: Number(r.gain_green), blue: Number(r.gain_blue), yellow: Number(r.gain_yellow),
+    orange: Number(r.gain_orange), green: Number(r.gain_green), blue: Number(r.gain_blue), magenta: Number(r.gain_magenta),
   }));
   const complete = repGains.length >= N_COLOR_CALIBRATION_REPS;
 

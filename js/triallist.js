@@ -53,11 +53,11 @@ function buildSubjectSessions(subjectId) {
 
   const sessions = Array.from({ length: N_SESSIONS }, () => []);
   const sessionTotals = new Array(N_SESSIONS).fill(0);
-  const sessionColorCounts = Array.from({ length: N_SESSIONS }, () => ({ red: 0, green: 0, blue: 0, yellow: 0 }));
+  const sessionColorCounts = Array.from({ length: N_SESSIONS }, () => ({ orange: 0, green: 0, blue: 0, magenta: 0 }));
 
   // groups a list of permutations by their rank-0 (correct) color
   const groupByCorrectColor = perms => {
-    const byColor = { red: [], green: [], blue: [], yellow: [] };
+    const byColor = { orange: [], green: [], blue: [], magenta: [] };
     perms.forEach(perm => byColor[perm[0]].push(perm));
     return byColor;
   };

@@ -31,7 +31,7 @@ foreach (glob($pattern) as $file) {
 }
 
 // COLOR_CSV_HEADER in config.js, kept in the same order here since no CSV parser exists client-side
-$colorColumns = ['date', 'time', 'sid', 'seed', 'trial', 'gain_red', 'gain_green', 'gain_blue', 'gain_yellow'];
+$colorColumns = ['date', 'time', 'sid', 'seed', 'trial', 'gain_orange', 'gain_green', 'gain_blue', 'gain_magenta'];
 $colorFile = sprintf('%s/%s_%s_COLOR.csv', $dataDir, DATA_PREFIX, $subjectId);
 
 $colorRows = [];
