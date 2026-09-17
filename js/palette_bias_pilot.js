@@ -1,14 +1,17 @@
 // Standalone single-subject pilot: does Equiluminant 4 actually produce a flatter (less biased)
-// response distribution than the old full-saturation palette? Every trial here shows the SAME
-// dot count for all four colors -- there is no correct answer, so whichever color a subject
-// reports as "most numerous" is pure response bias (perceptual salience + any motor key habit,
-// since both use the real experiment's fixed HJKL mapping, same as the main task would). If a
-// palette is truly equal-salience, its response counts should land near 25% per color; if one
-// color reads as more salient (as `current`'s CAM16-uncontrolled luminance predicts -- see
-// palette-review-final.html, whose recommendedBackground() finds no background gives `current`
-// equal contrast at all: contrast ranges 0.04-0.87 even at its best background), that color
-// should be over-picked. Not part of the main experiment/CSV schema -- open
-// palette-bias-pilot.html directly.
+// accuracy/confidence pattern between colors than the old full-saturation palette? Real
+// forced-choice trials with genuine correct answers, across the project's actual five 4-choice
+// conditions (README's easy/medium/hard tiers) -- not a rigged tied-count display, which would
+// tell the subject there's no real task and risk different behavior. The bias check works
+// because which color plays which role is randomized every trial and explicitly balanced: each
+// color is the correct answer exactly REPS_PER_CELL times per condition per palette. If a palette
+// is truly equal-salience, accuracy and confidence should not depend on which color happened to
+// be correct, once pooled across that balanced design; if one color is more salient (as
+// `current`'s CAM16-uncontrolled luminance predicts -- see palette-review-final.html, whose
+// recommendedBackground() finds no single background equalizes `current`'s contrast at all:
+// 0.04-0.87 even at its best background), trials where THAT color is correct should read out as
+// higher accuracy/confidence, and trials where it's a distractor should pull accuracy down.
+// Not part of the main experiment/CSV schema -- open palette-bias-pilot.html directly.
 const PALETTES = {
   current: {
     colors: { red: '#FF0000', green: '#00FF00', blue: '#0000FF', yellow: '#FFFF00' },
@@ -21,26 +24,46 @@ const PALETTES = {
     background: '#3B3B3B', // recommended background, contrast 0.75 (see colors.js/README)
   },
 };
-const DOTS_PER_COLOR = 25;
+// the project's real 4-choice conditions (conditions.js / README), spanning easy to hard --
+// hardcoded here rather than depending on conditions.js, same standalone convention as the other
+// pilots (duration_pilot.js, woto_pilot.js)
+const CONDITIONS_4CHOICE = [
+  [100, 60, 60, 60], // easy
+  [100, 70, 70, 40],
+  [100, 70, 55, 55],
+  [100, 80, 50, 50],
+  [100, 80, 65, 35], // hard
+];
 const STIMULUS_DURATION = 500; // the study's baseline/no-noise duration, so only palette varies
-const TRIALS_PER_PALETTE = 100; // 200 total, ~15 min -- power for a medium bias (Cohen's w~0.3, df=3)
+const REPS_PER_CELL = 6; // 5 conditions x 4 target colors x 6 reps = 120 trials/palette (240 total)
 
-// makeConfidenceTrial/makePauseableTrial (expt_util.js) read these -- unused here (no confidence
-// trial in this pilot) but harmless to define for consistency with the other standalone pilots
+// makeConfidenceTrial/makePauseableTrial (expt_util.js) read these -- pause isn't wired up here
+// (no P-key handler, single short block), but the names must exist or confidence recording throws
 const pauseRequested = false;
 const pauseActive = false;
 function setPauseHintVisible() {}
 
+// each color is forced to be the correct answer exactly REPS_PER_CELL times per condition per
+// palette (colors[0] always the balanced target); the other three colors fill the remaining
+// count-rank positions in random order, so no color is systematically stuck as e.g. the runner-up
 function buildBiasTrials() {
   const rng = mulberry32(Date.now() >>> 0);
   const trials = [];
   Object.keys(PALETTES).forEach(palette => {
     const names = Object.keys(PALETTES[palette].colors);
-    for (let i = 0; i < TRIALS_PER_PALETTE; i++) {
-      trials.push({ palette, colors: names, counts: names.map(() => DOTS_PER_COLOR), duration: STIMULUS_DURATION });
-    }
+    CONDITIONS_4CHOICE.forEach(counts => {
+      names.forEach(targetColor => {
+        for (let i = 0; i < REPS_PER_CELL; i++) {
+          const others = shuffle(names.filter(c => c !== targetColor), rng);
+          trials.push({
+            palette, colors: [targetColor, ...others], counts: counts.slice(),
+            correct_color: targetColor, duration: STIMULUS_DURATION,
+          });
+        }
+      });
+    });
   });
-  return shuffle(trials, rng); // interleaves both palettes trial-by-trial
+  return shuffle(trials, rng); // interleaves both palettes, every condition and target color
 }
 
 // same virtual-chinrest setup as the other standalone pilots, duplicated rather than pulling in
@@ -95,11 +118,10 @@ function drawBiasLegend(canvas, colors, keysMap) {
   });
 }
 
-// no correct answer on these trials (every color has the same count) -- this records which
-// color was picked and how long it took, nothing else. Self-contained rather than reusing
+// real accuracy scoring against trial.correct_color -- self-contained rather than reusing
 // makeDecisionTrial, since that reads the shared COLOR_KEYS constant this pilot deliberately
 // avoids mutating (see paletteSetupTrial above)
-function makeBiasDecisionTrial(trial, rows) {
+function makeBiasDecisionTrial(trial, result) {
   const keysMap = PALETTES[trial.palette].keys;
   const validKeys = trial.colors.map(c => keysMap[c]);
   return {
@@ -112,41 +134,50 @@ function makeBiasDecisionTrial(trial, rows) {
     choices: validKeys,
     data: { phase: 'bias_decision' },
     on_finish: function (data) {
-      const resp = Object.keys(keysMap).find(c => keysMap[c] === data.response);
-      rows.push({ palette: trial.palette, colors: trial.colors, counts: trial.counts, resp, rt: data.rt / 1000 });
+      const respColor = Object.keys(keysMap).find(c => keysMap[c] === data.response);
+      result.resp = respColor;
+      result.acc = respColor === trial.correct_color ? 1 : 0;
+      result.rt = data.rt / 1000;
     },
   };
 }
 
+// no feedback, mirroring the main experiment's own main-trial convention (see buildMainTimeline
+// in session_flow.js) -- this is the researcher running themself
 function buildBiasTimeline(trials, rows) {
   const nodes = [];
   trials.forEach(trial => {
+    const result = {};
     nodes.push(
       paletteSetupTrial(trial),
       makeFixationTrial(),
       makeStimulusTrial(trial),
-      makeBiasDecisionTrial(trial, rows),
+      makeBiasDecisionTrial(trial, result),
+      makeConfidenceTrial(result, function () { rows.push({ ...trial, ...result }); }),
     );
   });
   return nodes;
 }
 
-const BIAS_CSV_HEADER = 'palette,colors,counts,resp,rt';
+const BIAS_CSV_HEADER = 'palette,colors,counts,correct_color,resp,acc,rt,conf,c_rt';
 
 function biasRowToCsvLine(row) {
-  const fields = [row.palette, `[${row.colors.join(',')}]`, `[${row.counts.join(',')}]`, row.resp, row.rt];
+  const fields = [
+    row.palette, `[${row.colors.join(',')}]`, `[${row.counts.join(',')}]`, row.correct_color,
+    row.resp, row.acc, row.rt, row.conf, row.c_rt,
+  ];
   return fields.map(csvField).join(',');
 }
 
 function pilotInstructionsTrial() {
+  const total = Object.keys(PALETTES).length * CONDITIONS_4CHOICE.length * 4 * REPS_PER_CELL;
   return {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
       <div style="font-size:1.4em; max-width:640px;">
-        <p>Palette bias pilot: every trial shows the same number of dots of every color --
-        there's no correct answer. Just press the key (H/J/K/L) for whichever color looks like
-        it has the most dots, as fast as feels natural. ${TRIALS_PER_PALETTE * 2} trials, two
-        palettes interleaved, no feedback.</p>
+        <p>Palette bias pilot: same task as the main experiment (most-numerous color, HJKL
+        keys, 1-4 confidence). Two palettes, five difficulty conditions each, interleaved,
+        ${total} trials total, no feedback, no practice.</p>
         <p>Press spacebar to begin.</p>
       </div>`,
     choices: [' '],
