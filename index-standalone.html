@@ -1,0 +1,2025 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MAFC Testing Experiment</title>
+
+  <script src="https://unpkg.com/jspsych@7.3.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-canvas-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-virtual-chinrest@2.0.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-instructions@1.1.3"></script>
+  <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css">
+  <style>
+/* Equiluminant 4's recommended background, L* 25 -- see palette-review-final.html */
+html, body {
+  background-color: #3B3B3B;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* every trial (canvas or text) is sized/centered to exactly fill the viewport below, so any
+     overflow is a sizing bug, not something to scroll past */
+  overflow: hidden;
+  font-family: 'Avenir Next', sans-serif;
+  color: white;
+}
+
+#pre-check-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+}
+
+#subject-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+}
+
+#subject-id-error {
+  color: #cc0000;
+  min-height: 1.2em;
+}
+
+#subject-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 12px;
+  font-weight: bold;
+}
+
+#subject-confirm-number {
+  font-size: 4rem;
+}
+
+#subject-id-input {
+  font-size: 2rem;
+  width: min(24rem, 70vw);
+  text-align: center;
+  padding: 8px;
+}
+
+/* jsPsych's own display-element/content-wrapper chain has no definite height by default, so
+   flex centering has nothing to center within -- pin the whole chain to the viewport size.
+   font-size is scaled here (overriding jspsych.css's fixed 18px) and on #jspsych-target below
+   via --text-scale, set from VISUAL_ANGLE_SCALE in main.js, so instruction/transition/completion
+   text stays proportional to the same visual-angle factor as the canvas-drawn stimuli/prompts */
+:root {
+  --text-scale: 1;
+}
+
+#jspsych-target,
+.jspsych-display-element {
+  background-color: #3B3B3B;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: calc(18px * var(--text-scale));
+}
+
+#pause-hint {
+  position: fixed;
+  right: 16px;
+  bottom: 12px;
+  z-index: 10;
+  font-size: calc(16px * var(--text-scale));
+}
+
+#pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #3B3B3B;
+  font-size: calc(24px * var(--text-scale));
+  text-align: center;
+}
+
+.jspsych-content-wrapper {
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+/* jspsych.css caps this at max-width: 95% and margin: auto, which lets a full-viewport canvas
+   overflow its capped container and forces a scrollbar -- centering is handled by the flex
+   wrapper above instead */
+.jspsych-content {
+  max-width: none;
+  margin: 0;
+}
+
+/* canvas defaults to inline display, leaving a few px of baseline whitespace below it that's
+   enough to trigger a scrollbar on an otherwise exactly-viewport-sized canvas */
+#jspsych-canvas-stimulus {
+  display: block;
+}
+
+  </style>
+</head>
+
+<body>
+  <div id="pre-check-screen"></div>
+  <form id="subject-entry" style="display: none;">
+    <h2>Enter a trial label</h2>
+    <input type="text" id="subject-id-input" maxlength="40" autocomplete="off" placeholder="e.g. trial-001">
+    <p id="subject-id-error"></p>
+    <button type="submit">Continue</button>
+  </form>
+  <div id="subject-confirm" style="display: none;">
+    <p id="subject-confirm-number"><span id="subject-confirm-value"></span></p>
+    <p id="subject-confirm-continue">Press Enter to continue.</p>
+  </div>
+  <div id="jspsych-target" style="display: none;"></div>
+  <div id="pause-overlay" style="display: none;" role="dialog" aria-live="polite">
+    <p>Try to minimize time paused if possible.</p>
+    <p>Press spacebar to resume.</p>
+  </div>
+</body>
+
+<script>
+// fixed per-subject seeds, arbitrary but documented -- this app only needs to be internally
+// deterministic/reproducible. DELIBERATELY DIFFERENT from the previous experiment's seeds so a
+// subject who took part in both doesn't get a correlated trial order across the two studies.
+// trial labels are used as data identifiers and as the input to the deterministic seed below.
+// Keep this character set in sync with save.php, save_color.php, and progress.php.
+const TRIAL_LABEL_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
+
+function seedForTrialLabel(label) {
+  label = String(label);
+  let hash = 2166136261;
+  for (let i = 0; i < label.length; i += 1) {
+    hash ^= label.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+// filename stem for saved data: <prefix>_<label>_S01.csv / <prefix>_<label>_COLOR.csv. distinct from the
+// previous experiment's MAFC_EXPT so the two studies' data files can never collide even if a
+// data directory is ever shared. mirrored in the three php endpoints.
+const DATA_PREFIX = 'MAFC2_EXPT';
+
+// trial-count design: 20 reps x 8 conditions = 160 trials, run as a SINGLE session. Each
+// condition's 20 reps split evenly across STIMULUS_DURATIONS (10 at each duration), via the same
+// assignBalancedDurations machinery as before -- see triallist.js. To change the budget, keep
+//   N_REPS * (number of conditions) === N_SESSIONS * SESSION_SIZE, and keep SESSION_SIZE
+//   divisible by N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION.
+const N_REPS = 20;
+const N_SESSIONS = 1;
+const SESSION_SIZE = 160;
+
+// practice block sizes. day 1 (first-ever session): a single 20-trial easy+medium mixed block
+// w/ feedback. every later session: 20 easy+medium mixed w/ feedback, 20 more w/o feedback = 40
+// total. see DIFFICULTY_TIERS in conditions.js and buildDay1PracticeBlocks/
+// buildRepeatPracticeBlocks in triallist.js. N_SESSIONS is 1 here, so only the day-1 block
+// actually runs -- the repeat path is kept intact in case the design later grows to multiple
+// sessions.
+const N_PRACTICE_MIXED_DAY1 = 20;
+const N_PRACTICE_MIXED_REPEAT = 20;
+
+// each session is 1 run x 2 blocks x 80 trials/block = 160, so there's a single break at the
+// midpoint
+const N_TRIAL_TO_BREAK = 80;
+const RUNS_PER_SESSION = 1;
+const BLOCKS_PER_RUN = 2;
+const BREAK_DURATION = 30;
+
+// single tunable knob for every visual-angle size in the experiment (aperture, dots, fixation,
+// legend, prompt offset) -- multiplies the base degree values below and in expt_util.js
+const VISUAL_ANGLE_SCALE = 1.0;
+
+// dot display parameters, degrees of visual angle -- placeholders pending real display
+// calibration, carried over unchanged from the previous experiment. NOTE: this design's densest
+// condition is 100+80+70+30 = 280 dots, well under the previous experiment's 160+... maximum, so
+// the existing aperture/dot radii have more than enough room for non-overlapping placement.
+const APERTURE_RADIUS_DEG = 8.0 * VISUAL_ANGLE_SCALE;
+const DOT_RADIUS_DEG = 0.15 * VISUAL_ANGLE_SCALE;
+
+// response keys for the decision phase, one key per color -- unchanged, so a subject who has run
+// the previous experiment keeps the same motor mapping
+const COLOR_KEYS = { orange: 'h', green: 'j', blue: 'k', magenta: 'l' };
+
+// response keys for the confidence phase, 1 (low) to 4 (high)
+const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
+
+// stimulus durations: short/long, chosen from the duration pilot (see README) -- each of the 8
+// conditions runs at both, 10 reps apiece.
+const STIMULUS_DURATIONS = [100, 600];
+
+// `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
+// counts -- ratio_3 is always blank on 3-choice trials, as before.
+const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_magenta,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt';
+
+// color-matching calibration: 4 sliders (one per color), each dims that color's base hex toward
+// black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed; the slider itself
+// never exceeds 1.0 (see colors.js). subject repeats the match N_COLOR_CALIBRATION_REPS times,
+// each starting from an independent random slider position, and the final per-color gain is the
+// average across all reps
+const CALIBRATION_FLOOR = 0.20;
+const CALIBRATION_DOTS_PER_COLOR = 80;
+const N_COLOR_CALIBRATION_REPS = 2;
+
+const COLOR_CSV_HEADER = 'date,time,sid,seed,trial,gain_orange,gain_green,gain_blue,gain_magenta';
+
+// shown before the virtual chinrest. this study is a single session, so the "returning" variant
+// is currently unreachable -- it's kept (and still selected by the same isFirstSession flag) so
+// raising N_SESSIONS is a one-constant change
+const CHINREST_INTRO_TEXT_FIRST = `
+  <p>Welcome to the experiment!</p>
+  <p>We will first measure your viewing distance and monitor size.</p>
+  <p>Once measured, please keep your seating position and screen where they are for the rest of the session.</p>
+  <p>Press spacebar whenever you're ready.</p>
+`;
+
+const CHINREST_INTRO_TEXT_RETURNING = `
+  <p>Welcome back to the experiment!</p>
+  <p>We will first measure your viewing distance and monitor size.</p>
+  <p>Make sure you are using the same monitor as you've used in previous sessions.</p>
+  <p>Press spacebar whenever you're ready.</p>
+`;
+
+// shown as the very first screen of the experiment, before the trial label is even
+// entered. the previous experiment's monitor-consistency line is dropped here (nothing to be
+// consistent with in a single-session study) and replaced with a seating/lighting reminder, since
+// the chinrest calibration holds only for as long as the subject stays put.
+const PRE_CHECK_TEXT = `
+  <div style="font-size:1.2em; font-weight:bold;">
+    <p>Before you continue, please make sure:</p>
+    <p>1. Your browser zoom level is 100%.</p>
+    <p>2. You are using a Chrome or Firefox browser.</p>
+    <p>3. You have a stable internet connection.</p>
+    <p>4. You have at least an hour of undisturbed time.</p>
+    <p>5. You are seated comfortably in a room with steady lighting.</p>
+    <p>Press spacebar to continue.</p>
+  </div>
+`;
+
+// text markup for the two-screen pre-calibration instructions -- illustration on top before any
+// written instructions, with a larger font than the experiment's other instruction text (see
+// style.css's --text-scale) since this pairs with an illustration and needs to read clearly at a
+// glance. img src/displayWidthPx are computed at runtime in color_calibration.js (that file loads
+// after this one, so it has access to the canvas/color-gain helpers this template doesn't need
+// directly)
+function buildColorCalibrationStimulusText(stimulusImgSrc, displayWidthPx) {
+  return `
+    <div style="font-size:1.4em;">
+      <p><img src="${stimulusImgSrc}" style="width:${displayWidthPx}px;"></p>
+      <p>Before the task begins, we'd like to first configure the saliency of colors used in the experiment.</p>
+      <p>You will see a cloud of colored dots, similar to the example shown above.</p>
+      <p>Use the Right Arrow key, or click Next, to continue.</p>
+    </div>
+  `;
+}
+
+// second calibration instructions page: plain text, no illustration -- the real sliders/button
+// are shown on the very next screen, so there's nothing extra to mock up here
+function buildColorCalibrationMappingText() {
+  return `
+    <div style="font-size:1.4em;">
+      <p>You will see four sliders labeled Red, Green, Blue, and Yellow, each starting at a random position.</p>
+      <p>Drag the sliders until no single color looks more salient than the others in the dot cloud.</p>
+      <p>Once you're satisfied, click Confirm.</p>
+      <p>You will repeat this ${N_COLOR_CALIBRATION_REPS} times.</p>
+      <p>Use the Right Arrow key, or click Next, to begin.</p>
+    </div>
+  `;
+}
+
+// trial counts are interpolated from the same constants that drive the actual session structure
+// (RUNS_PER_SESSION/BLOCKS_PER_RUN/N_TRIAL_TO_BREAK above) so this text can't drift out of sync,
+// same reasoning as buildMainInstructionsPages in main_instructions.js
+function buildTransitionText() {
+  return `
+    <div style="font-size:1.4em;">
+      <p>Good job! You have completed the practice trials.</p>
+      <p>You will now perform ${RUNS_PER_SESSION} runs of ${BLOCKS_PER_RUN} blocks, with each block containing ${N_TRIAL_TO_BREAK} trials.</p>
+      <p>No feedback will be given during the experimental trials.</p>
+      <p>Make sure to try your best!</p>
+      <p>Press any key to continue.</p>
+    </div>
+  `;
+}
+
+// single-session study, so finishing a session finishes the study -- the previous experiment's
+// "return next week" line is gone. STUDY_COMPLETE_TEXT below still exists for the case where a
+// subject reopens the page after already finishing.
+const SESSION_COMPLETE_TEXT = `
+  <div style="font-size:1.4em;">
+    <p>You have completed the experiment!</p>
+    <p>Make sure to save all the files before closing this window.</p>
+  </div>
+`;
+const SAVE_FAILED_TEXT = `
+  <div style="font-size:1.4em;">
+    <p>There was an error saving your data.</p>
+    <p>Please try again later.</p>
+  </div>
+`;
+
+// shown above the "Save Data to Computer" button on the local-backup screen at the end of every
+// session -- placeholder wording
+const LOCAL_SAVE_PROMPT_TEXT = 'As a backup, please also save a copy of your data to your own computer.';
+
+const STUDY_COMPLETE_TEXT = '<p>Hurray! You have completed this study. Thank you for participating!</p>';
+
+</script>
+
+<script>
+// Equiluminant 4 palette (see palette-review-final.html) -- equal CAM16 lightness and
+// colorfulness, hues spaced evenly, replacing the old full-saturation RGBY primaries
+const COLORS = {
+  orange: '#D78426',
+  green: '#56B16E',
+  blue: '#40A4E4',
+  magenta: '#CA79C4',
+};
+
+// numeric codes for raw data output, keeps color columns text-free
+const COLOR_CODES = {
+  orange: 1,
+  green: 2,
+  blue: 3,
+  magenta: 4,
+};
+
+// insertion order (orange, green, blue, magenta) matters -- it feeds the permutation generator below
+const COLOR_NAMES = Object.keys(COLORS);
+
+// 'orange' -> 'Orange', for subject-facing text -- COLOR_NAMES/correct_color are always lowercase
+// internally, so every screen that names a color in prose (instructions, feedback) goes through this
+function capitalizeColorName(color) {
+  return color.charAt(0).toUpperCase() + color.slice(1);
+}
+
+// scales a #RRGGBB hex color's channels by `gain`, clamped to the valid 0-255 range per channel --
+// clamping (not just rounding) is what keeps an already-saturated channel (255) from overflowing
+// when gain > 1, and keeps a heavily-dimmed channel from going negative
+function applyGain(hex, gain) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const clamp = v => Math.max(0, Math.min(255, Math.round(v * gain)));
+  const toHex = v => v.toString(16).padStart(2, '0');
+  return `#${toHex(clamp(r))}${toHex(clamp(g))}${toHex(clamp(b))}`;
+}
+
+// per-color multiplier applied on top of the base COLORS palette -- 1.0 means unadjusted. the
+// calibration slider only ever runs 0..1 (CALIBRATION_FLOOR..1 in config.js), so gain never
+// exceeds 1.0 in practice. starting the staircase at 75% leaves headroom to move a color both
+// brighter and dimmer during matching
+const DEFAULT_START_GAIN = 0.75;
+const DEFAULT_COLOR_GAINS = { orange: DEFAULT_START_GAIN, green: DEFAULT_START_GAIN, blue: DEFAULT_START_GAIN, magenta: DEFAULT_START_GAIN };
+
+function getGainedColors(gains) {
+  const gained = {};
+  COLOR_NAMES.forEach(c => { gained[c] = applyGain(COLORS[c], gains[c]); });
+  return gained;
+}
+
+// colors actually used for drawing during practice/main trials, set once color calibration
+// resolves (a fresh staircase result or a prior session's saved gains) -- COLORS itself stays the
+// fixed, un-gained base palette so gains are always computed relative to the same reference
+let ACTIVE_COLORS = { ...COLORS };
+
+function setActiveColors(gains) {
+  ACTIVE_COLORS = getGainedColors(gains);
+}
+
+</script>
+
+<script>
+// raw csv text for the new experiment's condition set. UNLIKE the previous experiment's
+// conditions.csv (which stored a `top` count plus ratios of it), this design is specified
+// directly in dot counts, so counts are the source of truth here and `top`/`ratios` are derived
+// below. that keeps the saved data file's columns (top, ratio_1..ratio_3) byte-compatible with
+// the previous experiment's output while letting a future condition be any arbitrary set of
+// counts, not just clean multiples of a shared top.
+//
+// design: 3 three-choice conditions + 5 four-choice conditions = 8 total. no two-choice
+// conditions in this experiment.
+const CONDITIONS_CSV = `n_choice,count_1,count_2,count_3,count_4
+3,100,70,70,
+3,100,80,60,
+3,100,90,50,
+4,100,80,50,50
+4,100,80,65,35
+4,100,70,55,55
+4,100,70,70,40
+4,100,60,60,60`;
+
+// choice-set sizes present in this experiment -- previously hard-coded as [2, 3, 4] in several
+// places, pulled out here so triallist.js and buildDifficultyTiers stay in sync with the csv
+const N_CHOICE_SIZES = [3, 4];
+
+// parse the embedded csv into CONDITIONS = {3:[...], 4:[...]}, preserving each row's position
+// within its n_choice group -- that position is the condition_id used everywhere else, so row
+// order here must stay identical to the design table above.
+//
+// each parsed condition carries:
+//   counts  - the literal dot counts, rank-ordered (most dots first)
+//   top     - counts[0], the winning color's count (kept for the data file's `top` column)
+//   ratios  - counts[i]/top for i > 0 (kept for the data file's ratio_1..3 columns, and used by
+//             buildDifficultyTiers below to rank difficulty)
+function parseConditions(csvText) {
+  const lines = csvText.trim().split('\n').slice(1);
+  const conditions = {};
+  N_CHOICE_SIZES.forEach(n => { conditions[n] = []; });
+
+  lines.forEach(line => {
+    const cells = line.split(',');
+    const nChoice = parseInt(cells[0], 10);
+    const counts = cells.slice(1, 1 + nChoice).map(Number);
+    const top = counts[0];
+    const ratios = counts.slice(1).map(c => c / top);
+    conditions[nChoice].push({ counts, top, ratios });
+  });
+
+  return conditions;
+}
+
+const CONDITIONS = parseConditions(CONDITIONS_CSV);
+
+// pools every condition across all n_choice sizes into 3 difficulty tiers, ranked by ratio1
+// (ratios[0]) -- smaller ratio1 means a bigger gap between the top and 2nd-place color, i.e.
+// easier. unchanged from the previous experiment except that it now splits 8 conditions (3/3/2)
+// instead of 75 (25/25/25); the divmod sizing already handled any pool size. used by the
+// practice-trial builders in triallist.js: day 1 draws separately from easy and medium, every
+// later session draws from the two pooled together. hard is computed but not used by practice.
+//
+// with only 8 conditions the tiers are coarse -- easy is [100,70,55,55], [100,60,60,60],
+// [100,80,65,35] and hard is [100,80,60], [100,80,50,50], [100,90,50]. worth revisiting if
+// practice feels mis-pitched, since ratio1 alone ignores how many distractors sit just behind the
+// leader.
+function buildDifficultyTiers() {
+  const flat = [];
+  N_CHOICE_SIZES.forEach(nChoice => {
+    CONDITIONS[nChoice].forEach((cond, conditionId) => {
+      flat.push({
+        n_choice: nChoice, condition_id: conditionId,
+        top: cond.top, ratios: cond.ratios, counts: cond.counts,
+      });
+    });
+  });
+
+  // ties keep csv row order, since Array.prototype.sort is a stable sort
+  flat.sort((a, b) => a.ratios[0] - b.ratios[0]);
+
+  const n = flat.length;
+  const base = Math.floor(n / 3);
+  const extra = n % 3;
+  const sizes = [base + (extra > 0 ? 1 : 0), base + (extra > 1 ? 1 : 0), base];
+
+  const easy = flat.slice(0, sizes[0]);
+  const medium = flat.slice(sizes[0], sizes[0] + sizes[1]);
+  const hard = flat.slice(sizes[0] + sizes[1]);
+
+  return { easy, medium, hard, easyMedium: easy.concat(medium) };
+}
+
+const DIFFICULTY_TIERS = buildDifficultyTiers();
+
+</script>
+
+<script>
+// mulberry32: small, well-tested seeded pseudo-random generator, returns a function that yields
+// floats in [0,1), same call signature as Math.random
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0;
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// fisher-yates shuffle using a seeded rng function (rng() must return a float in [0,1))
+function shuffle(array, rng) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// indices that would sort arr ascending, ties broken by original index -- mirrors the greedy
+// "give the extra trial to whichever session currently holds the fewest" balancing idiom
+function argsortAscending(arr) {
+  return arr.map((_, i) => i).sort((a, b) => arr[a] - arr[b]);
+}
+
+</script>
+
+<script>
+// permutations of `arr` taken `r` at a time, in the same order Python's itertools.permutations
+// would produce for a list of unique elements (lexicographic by input position)
+function permutations(arr, r) {
+  const results = [];
+  const used = new Array(arr.length).fill(false);
+
+  function extend(current) {
+    if (current.length === r) {
+      results.push(current.map(i => arr[i]));
+      return;
+    }
+    for (let i = 0; i < arr.length; i++) {
+      if (used[i]) continue;
+      used[i] = true;
+      extend([...current, i]);
+      used[i] = false;
+    }
+  }
+
+  extend([]);
+  return results;
+}
+
+</script>
+
+<script>
+// builds all sessions' worth of trials for one subject, deterministically from their seed.
+// structurally the same as the previous experiment's builder -- balance condition reps across
+// sessions, then balance correct-color counts within each session -- with two changes forced by
+// this design:
+//
+//   1. choice sizes come from N_CHOICE_SIZES (conditions.js), which is [3, 4] here. no
+//      two-choice conditions.
+//   2. the per-condition permutation cycle is REFILLED when exhausted. the previous experiment
+//      handed each condition only 9-10 trials per session, always fewer than the 24 available
+//      colour permutations, so a single shuffled cycle always sufficed. this design has 8
+//      conditions instead of 75, so each one gets 90 trials per session -- the cycle runs out
+//      partway through and has to be reshuffled, exactly as buildPracticeTriallistFromPool
+//      already does below. without the refill the color picker would run off the end of an empty
+//      list and throw.
+// keyFn is the fine-grained cell duration is balanced within (so it can't get correlated with,
+// e.g., correct color); correctionKeyFn is the coarser grouping the two-level fixup below targets
+// an exact split for (e.g. condition alone, ignoring color) -- defaults to keyFn so a single-key
+// caller (buildPracticeTriallistFromPool) is unaffected
+function assignBalancedDurations(trials, keyFn, rng, correctionKeyFn = keyFn) {
+  const groups = {};
+  trials.forEach(trial => {
+    const key = keyFn(trial);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(trial);
+  });
+
+  const oddGroups = [];
+  Object.values(groups).forEach(group => {
+    const durations = Array.from({ length: group.length }, (_, i) =>
+      STIMULUS_DURATIONS[i % STIMULUS_DURATIONS.length]);
+    shuffle(durations, rng);
+    if (group.length % STIMULUS_DURATIONS.length !== 0) oddGroups.push({ group, durations });
+    group.forEach((trial, i) => { trial.duration = durations[i]; });
+  });
+
+  // For the two-level manipulation, distribute odd-cell extras across levels so that EVERY
+  // correction-key's own trials land exactly half at each duration whenever that count is even --
+  // done per correction-key (not globally), so e.g. every condition hits an exact split instead of
+  // only the session as a whole. Odd-groups are only swapped against others sharing the same
+  // correction key, so a fix for one condition can't borrow from another's imbalance.
+  if (STIMULUS_DURATIONS.length === 2) {
+    const firstDuration = STIMULUS_DURATIONS[0];
+    const trialsByCorrectionKey = {};
+    trials.forEach(trial => {
+      const key = correctionKeyFn(trial);
+      (trialsByCorrectionKey[key] ||= []).push(trial);
+    });
+    const oddGroupsByCorrectionKey = {};
+    oddGroups.forEach(entry => {
+      const key = correctionKeyFn(entry.group[0]);
+      (oddGroupsByCorrectionKey[key] ||= []).push(entry);
+    });
+
+    Object.keys(trialsByCorrectionKey).forEach(key => {
+      const keyTrials = trialsByCorrectionKey[key];
+      const firstCount = keyTrials.filter(trial => trial.duration === firstDuration).length;
+      const targetFirst = Math.floor(keyTrials.length / STIMULUS_DURATIONS.length);
+      const groupsToSwap = firstCount - targetFirst;
+      const odds = shuffle((oddGroupsByCorrectionKey[key] || []).slice(), rng);
+      odds.slice(0, groupsToSwap).forEach(({ group }) => {
+        group.forEach(trial => {
+          trial.duration = trial.duration === firstDuration
+            ? STIMULUS_DURATIONS[1] : firstDuration;
+        });
+      });
+    });
+  }
+}
+
+function buildSubjectSessions(subjectId) {
+  const seed = seedForTrialLabel(subjectId);
+  const rng = mulberry32(seed);
+  console.log(`subject ${subjectId}, seed ${seed}`);
+
+  const sessions = Array.from({ length: N_SESSIONS }, () => []);
+  const sessionTotals = new Array(N_SESSIONS).fill(0);
+  const sessionColorCounts = Array.from({ length: N_SESSIONS }, () => ({ orange: 0, green: 0, blue: 0, magenta: 0 }));
+
+  // groups a list of permutations by their rank-0 (correct) color
+  const groupByCorrectColor = perms => {
+    const byColor = { orange: [], green: [], blue: [], magenta: [] };
+    perms.forEach(perm => byColor[perm[0]].push(perm));
+    return byColor;
+  };
+
+  N_CHOICE_SIZES.forEach(nChoice => {
+    const cycle = permutations(COLOR_NAMES, nChoice);
+
+    CONDITIONS[nChoice].forEach((cond, conditionId) => {
+      // how many of this condition's N_REPS land in each session -- the remainder is handed to
+      // whichever sessions currently hold the fewest total trials
+      const base = Math.floor(N_REPS / N_SESSIONS);
+      const extra = N_REPS % N_SESSIONS;
+      const priority = argsortAscending(sessionTotals);
+      const extraSessions = new Set(priority.slice(0, extra));
+
+      for (let s = 0; s < N_SESSIONS; s++) {
+        const k = base + (extraSessions.has(s) ? 1 : 0);
+        sessionTotals[s] += k;
+
+        // walk a shuffled permutation cycle grouped by rank-0 (correct) color, greedily handing
+        // each trial to whichever color is currently most under-represented in this session --
+        // keeps every session's correct-color counts within 1 of each other at every step, so
+        // after 720 trials (divisible by 4) they land at exactly 180 each. the cycle is
+        // reshuffled from scratch whenever every color's bucket is empty, so each full sweep of
+        // the 24 permutations is used once before any of them repeats.
+        let byColor = groupByCorrectColor(shuffle(cycle.slice(), rng));
+
+        for (let t = 0; t < k; t++) {
+          let available = COLOR_NAMES.filter(c => byColor[c].length > 0);
+          if (available.length === 0) {
+            byColor = groupByCorrectColor(shuffle(cycle.slice(), rng));
+            available = COLOR_NAMES.filter(c => byColor[c].length > 0);
+          }
+
+          available = shuffle(available, rng);
+          const color = available.reduce((best, c) =>
+            (sessionColorCounts[s][c] < sessionColorCounts[s][best] ? c : best), available[0]);
+          const perm = byColor[color].pop();
+          sessionColorCounts[s][color] += 1;
+
+          sessions[s].push({
+          n_choice: nChoice, condition_id: conditionId, top: cond.top, ratios: cond.ratios,
+          colors: perm.slice(), counts: cond.counts.slice(), correct_color: perm[0], session: s + 1,
+          });
+        }
+      }
+    });
+  });
+
+  // balance duration inside each condition/color cell before order randomization, so the factor
+  // cannot become correlated with either the condition or the correct response color
+  sessions.forEach((session, s) => {
+    assignBalancedDurations(
+      session,
+      trial => `${trial.n_choice}:${trial.condition_id}:${trial.correct_color}`,
+      rng,
+      trial => `${trial.n_choice}:${trial.condition_id}`,
+    );
+    shuffle(session, rng);
+    const durationCounts = {};
+    session.forEach(trial => { durationCounts[trial.duration] = (durationCounts[trial.duration] || 0) + 1; });
+    console.log(`subject ${subjectId}, session ${s + 1}, duration counts`, durationCounts);
+  });
+  return sessions;
+}
+
+// distributes `total` items across `nBuckets` as evenly as possible, remainder handed to the
+// first buckets -- same divmod idiom used throughout this file
+function distributeCounts(total, nBuckets) {
+  const base = Math.floor(total / nBuckets);
+  const extra = total % nBuckets;
+  return Array.from({ length: nBuckets }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
+// practice trials drawn from a difficulty-tier condition pool (DIFFICULTY_TIERS in conditions.js):
+// nTotal trials split evenly across whichever choice-sizes are present in the pool, then spread
+// across that choice-size's pool conditions (round-robin over a shuffled order). colors are
+// assigned via a shuffled permutation cycle shared across the whole choice-size group, reshuffled
+// whenever exhausted, keeping the block close to color-balanced without requiring reps to be a
+// multiple of the cycle length.
+//
+// note this design's pools are small (3 conditions in easy, 3 in medium, 6 in easy+medium), so
+// unlike the previous experiment a practice block now repeats each pooled condition several
+// times rather than sampling distinct ones -- unavoidable with 8 conditions total, and harmless
+// since practice is never saved.
+function buildPracticeTriallistFromPool(nTotal, pool, rng) {
+  const choiceSizes = shuffle(N_CHOICE_SIZES.filter(n => pool.some(c => c.n_choice === n)), rng);
+  const countsByChoice = {};
+  distributeCounts(nTotal, choiceSizes.length).forEach((count, i) => { countsByChoice[choiceSizes[i]] = count; });
+
+  let trials = [];
+  choiceSizes.forEach(nChoice => {
+    const total = countsByChoice[nChoice];
+    if (total === 0) return;
+
+    const conditionOrder = shuffle(pool.filter(c => c.n_choice === nChoice), rng);
+    const perConditionCounts = distributeCounts(total, conditionOrder.length);
+    let colorCycle = [];
+
+    conditionOrder.forEach((cond, i) => {
+      const reps = perConditionCounts[i];
+      for (let r = 0; r < reps; r++) {
+        if (colorCycle.length === 0) colorCycle = shuffle(permutations(COLOR_NAMES, nChoice), rng);
+        const colors = colorCycle.pop();
+        trials.push({
+          n_choice: nChoice, condition_id: cond.condition_id, top: cond.top, ratios: cond.ratios,
+          colors: colors.slice(), counts: cond.counts.slice(), correct_color: colors[0],
+        });
+      }
+    });
+  });
+
+  assignBalancedDurations(trials, trial => `${trial.n_choice}:${trial.condition_id}`, rng);
+
+  shuffle(trials, rng);
+  return trials;
+}
+
+// day-1 (first-ever session) practice: a single 20-trial easy+medium mixed block w/ feedback.
+// this is the only practice path that runs while N_SESSIONS is 1.
+function buildDay1PracticeBlocks(rng) {
+  return [
+    { trials: buildPracticeTriallistFromPool(N_PRACTICE_MIXED_DAY1, DIFFICULTY_TIERS.easyMedium, rng), feedback: true },
+  ];
+}
+
+// every later session's practice: 20 easy+medium mixed w/ feedback, then 20 more w/o feedback --
+// 40 total. unreachable while N_SESSIONS is 1; kept so raising that constant needs no other edit.
+function buildRepeatPracticeBlocks(rng) {
+  return [
+    { trials: buildPracticeTriallistFromPool(N_PRACTICE_MIXED_REPEAT, DIFFICULTY_TIERS.easyMedium, rng), feedback: true },
+    { trials: buildPracticeTriallistFromPool(N_PRACTICE_MIXED_REPEAT, DIFFICULTY_TIERS.easyMedium, rng), feedback: false },
+  ];
+}
+
+</script>
+
+<script>
+// rejection-sample dot centers uniformly within the aperture (by area, not bunched at center) so
+// no two dots overlap, regardless of the color eventually assigned to them -- same algorithm as
+// the pilot's generate_dot_positions. uses plain Math.random, not the subject's seeded rng, since
+// dot layout is visual only and never needs to be reproduced for cross-day resume
+function generateDotPositions(nDots, apertureRadius, dotRadius, maxAttempts = 500) {
+  const positions = [];
+  const placeRadius = apertureRadius - dotRadius;
+  let attempts = 0;
+
+  while (positions.length < nDots) {
+    attempts += 1;
+    if (attempts > maxAttempts * nDots) {
+      throw new Error(`could not place ${nDots} non-overlapping dots in ${attempts} attempts, lower dot_radius or raise aperture_radius`);
+    }
+
+    // r = placeRadius * sqrt(uniform) samples uniformly by area, not bunched at center
+    const r = placeRadius * Math.sqrt(Math.random());
+    const theta = Math.random() * 2 * Math.PI;
+    const candidate = [r * Math.cos(theta), r * Math.sin(theta)];
+
+    if (positions.length === 0) {
+      positions.push(candidate);
+      continue;
+    }
+
+    const minDist = positions.reduce((min, p) =>
+      Math.min(min, Math.hypot(p[0] - candidate[0], p[1] - candidate[1])), Infinity);
+    if (minDist >= 2 * dotRadius) positions.push(candidate);
+  }
+
+  return positions;
+}
+
+// positions are generated color-agnostic, then counts-many copies of each color are shuffled
+// independently and zipped to positions -- zero positional correlation with color, same approach
+// as the pilot's build_dot_stim
+function buildDotCloud(trial) {
+  const nTotal = trial.counts.reduce((a, b) => a + b, 0);
+  const positions = generateDotPositions(nTotal, APERTURE_RADIUS_DEG, DOT_RADIUS_DEG);
+
+  const colorLabels = [];
+  trial.colors.forEach((color, i) => {
+    for (let j = 0; j < trial.counts[i]; j++) colorLabels.push(color);
+  });
+  shuffle(colorLabels, Math.random);
+
+  return positions.map((pos, i) => ({ pos, color: colorLabels[i] }));
+}
+
+</script>
+
+<script>
+// tracks the most recent save request so the session-complete screen can wait for the real
+// upload to finish, instead of a fixed timer disconnected from the actual network call -- shared
+// by session_flow.js (main/practice data) and color_calibration.js (calibration data)
+let lastSaveResponse = Promise.resolve();
+
+// true only once the newest queued save has been confirmed by the server -- false from the moment
+// any save starts until it (or a retry of it) actually succeeds, so a save that's mid-retry or has
+// exhausted every retry both correctly read as "not safely saved yet"
+let lastSaveOk = true;
+
+// set false the first time fetchProgress (session_flow.js) can't reach progress.php -- covers
+// both file:// (fetch throws outright) and a plain static host with no PHP handler (404, not
+// valid JSON). Once false, saveSessionData/saveColorData skip enqueueSave entirely instead of
+// retrying against endpoints that don't exist: without this, every trial's failed save would
+// retry with backoff (up to ~15s each) in a queue that falls further behind all session long, and
+// the session-complete screen would sit waiting on that backlog instead of moving straight to the
+// local CSV download (buildLocalSaveTrial), which works with no server either way
+let serverAvailable = true;
+
+// warns before the tab/window closes while the latest save hasn't been confirmed -- browsers
+// replace any custom message with their own generic prompt, but the listener has to call
+// preventDefault/set returnValue for that prompt to appear at all
+window.addEventListener('beforeunload', function (e) {
+  if (!lastSaveOk) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// posts JSON to url, retrying transient failures (network errors, or non-2xx responses -- a bare
+// fetch never rejects on e.g. a 500, so response.ok has to be checked by hand) with exponential
+// backoff. only rejects once every retry is exhausted, so a caller seeing this reject means the
+// server truly never accepted the save, not just a single dropped request
+async function postJsonWithRetry(url, payload, maxRetries = 4, baseDelayMs = 1000) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`save request to ${url} failed with status ${res.status}`);
+      const body = await res.text();
+      try {
+        return JSON.parse(body);
+      } catch (error) {
+        if (!['localhost', '127.0.0.1'].includes(location.hostname)) throw error;
+        return { ok: true, staticTest: true };
+      }
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, baseDelayMs * 2 ** attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
+// single shared write queue for every save endpoint (save.php and save_color.php) -- each call is
+// chained after the previous one instead of firing immediately, so two saves in flight can never
+// finish out of order and have the smaller/older payload overwrite the larger/newer one on disk.
+// also the one place lastSaveOk/lastSaveResponse get updated, so both save.php and save_color.php
+// share the same beforeunload guard and session-complete success check
+let saveQueue = Promise.resolve();
+
+function enqueueSave(url, payload) {
+  lastSaveOk = false;
+  const attempt = saveQueue.then(() => postJsonWithRetry(url, payload));
+  saveQueue = attempt.then(() => {}, () => {});
+  lastSaveResponse = attempt.then(
+    result => { lastSaveOk = true; return result; },
+    err => { lastSaveOk = false; throw err; },
+  );
+  return lastSaveResponse;
+}
+
+// triggers a browser download of csvText as filename -- the local backup copy prompted at the end
+// of every session, independent of whether the server-side save (save.php, via enqueueSave above)
+// actually succeeded
+function downloadCsvText(filename, csvText) {
+  const blob = new Blob([csvText], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function csvField(value) {
+  const str = String(value);
+  return str.includes(',') ? `"${str}"` : str;
+}
+
+function formatDate(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+}
+
+function formatTime(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
+// px-per-degree from this session's virtual-chinrest calibration, looked up once and cached --
+// unlike the template's bug of leaving stimulus size in fixed pixels, every degree-based size in
+// this file is converted through this value
+let cachedPxPerDeg = null;
+
+function getPxPerDeg() {
+  if (cachedPxPerDeg === null) {
+    const chinrestData = jsPsych.data.get().filter({ trial_type: 'virtual-chinrest' });
+    cachedPxPerDeg = parseFloat(chinrestData.select('px2deg').values[0]);
+  }
+  return cachedPxPerDeg;
+}
+
+// jsPsych's canvas-keyboard-response plugin takes canvas_size as [height, width], not
+// [width, height] -- easy to get backwards, and doing so silently draws a transposed canvas
+function getCanvasSize() {
+  return [window.innerHeight, window.innerWidth];
+}
+
+function canvasCenter(canvas) {
+  return [canvas.width / 2, canvas.height / 2];
+}
+
+// two concentric outlined circles, same shape as the pilot's fixation
+function drawFixation(canvas) {
+  const ctx = canvas.getContext('2d');
+  const [cx, cy] = canvasCenter(canvas);
+  const pxPerDeg = getPxPerDeg();
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 4;
+  [0.25, 0.5].forEach(rDeg => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, rDeg * VISUAL_ANGLE_SCALE * pxPerDeg, 0, 2 * Math.PI);
+    ctx.stroke();
+  });
+}
+
+// draws this trial's dot cloud, converting degrees to pixels via this session's calibration
+function drawStimulus(canvas, trial) {
+  const ctx = canvas.getContext('2d');
+  const [cx, cy] = canvasCenter(canvas);
+  const pxPerDeg = getPxPerDeg();
+  const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
+
+  buildDotCloud(trial).forEach(dot => {
+    const x = cx + dot.pos[0] * pxPerDeg;
+    const y = cy - dot.pos[1] * pxPerDeg;
+    ctx.beginPath();
+    ctx.arc(x, y, dotRadiusPx, 0, 2 * Math.PI);
+    ctx.fillStyle = ACTIVE_COLORS[dot.color];
+    ctx.fill();
+  });
+}
+
+// dedicated dot-cloud builder for the color-calibration task: a fixed 4-color, equal-N cloud.
+// returns color labels (not baked-in hex) so a caller can redraw the same fixed positions at
+// different gains -- e.g. color_calibration.js's sliders redraw live while dragging without
+// re-running rejection sampling on every 'input' event
+function buildCalibrationDotCloud(nDotsPerColor) {
+  const nTotal = nDotsPerColor * COLOR_NAMES.length;
+  const positions = generateDotPositions(nTotal, APERTURE_RADIUS_DEG, DOT_RADIUS_DEG);
+
+  const colorLabels = [];
+  COLOR_NAMES.forEach(color => { for (let j = 0; j < nDotsPerColor; j++) colorLabels.push(color); });
+  shuffle(colorLabels, Math.random);
+
+  return positions.map((pos, i) => ({ pos, color: colorLabels[i] }));
+}
+
+// redraws a calibration dot cloud (fixed positions/labels from buildCalibrationDotCloud) at the
+// given gains -- called on every slider drag, so this only recolors, it never re-places dots
+function drawCalibrationStimulus(canvas, dotCloud, gains) {
+  const ctx = canvas.getContext('2d');
+  const [cx, cy] = canvasCenter(canvas);
+  const pxPerDeg = getPxPerDeg();
+  const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
+  const gainedColors = getGainedColors(gains);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  dotCloud.forEach(dot => {
+    const x = cx + dot.pos[0] * pxPerDeg;
+    const y = cy - dot.pos[1] * pxPerDeg;
+    ctx.beginPath();
+    ctx.arc(x, y, dotRadiusPx, 0, 2 * Math.PI);
+    ctx.fillStyle = gainedColors[dot.color];
+    ctx.fill();
+  });
+}
+
+// yOffsetDeg is how far ABOVE center the text sits -- default matches the decision/confidence
+// trials, which never have a stimulus on screen at the same time. the calibration screen does, so
+// it passes a larger offset to clear the dot cloud (see drawCalibrationStimulus)
+function drawPrompt(canvas, text, yOffsetDeg = 4 * VISUAL_ANGLE_SCALE) {
+  const ctx = canvas.getContext('2d');
+  const [cx, cy] = canvasCenter(canvas);
+  const pxPerDeg = getPxPerDeg();
+  ctx.fillStyle = 'white';
+  ctx.font = `${24 * VISUAL_ANGLE_SCALE}px Avenir Next, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(text, cx, cy - yOffsetDeg * pxPerDeg);
+}
+
+// grey fill for legend buttons whose color isn't a valid response this trial (2-choice and
+// 3-choice trials don't use all 4 colors) -- keeps the button/key visible without revealing
+// which colors are actually in play
+const UNAVAILABLE_LEGEND_COLOR = '#999999';
+
+// fixed color-key legend, same four rectangles every trial so the key mapping never has to be
+// memorized -- all 4 buttons are always drawn, but only the colors present this trial (validColors)
+// show their real color; the rest are greyed out. yOffsetDeg is how far BELOW center the row sits
+// (default matches the decision trial, which has no stimulus on screen at the same time);
+// colorMap defaults to the resolved ACTIVE_COLORS but the calibration screen passes this trial's
+// own gained colors, since ACTIVE_COLORS isn't set until calibration finishes
+function drawColorLegend(canvas, validColors, yOffsetDeg = 5 * VISUAL_ANGLE_SCALE, colorMap = ACTIVE_COLORS) {
+  const ctx = canvas.getContext('2d');
+  const [cx, cy] = canvasCenter(canvas);
+  const pxPerDeg = getPxPerDeg();
+  // .map scales each fixed legend x-position by the same visual-angle factor as everything else
+  const legendXDeg = [-9, -3, 3, 9].map(x => x * VISUAL_ANGLE_SCALE);
+  const rectWidthPx = 4 * VISUAL_ANGLE_SCALE * pxPerDeg;
+  const rectHeightPx = 3 * VISUAL_ANGLE_SCALE * pxPerDeg;
+
+  COLOR_NAMES.forEach((color, i) => {
+    const x = cx + legendXDeg[i] * pxPerDeg;
+    const y = cy + yOffsetDeg * pxPerDeg;
+
+    ctx.fillStyle = validColors.includes(color) ? colorMap[color] : UNAVAILABLE_LEGEND_COLOR;
+    ctx.strokeStyle = 'white';
+    ctx.fillRect(x - rectWidthPx / 2, y - rectHeightPx / 2, rectWidthPx, rectHeightPx);
+    ctx.strokeRect(x - rectWidthPx / 2, y - rectHeightPx / 2, rectWidthPx, rectHeightPx);
+
+    ctx.fillStyle = 'black';
+    ctx.font = `bold ${20 * VISUAL_ANGLE_SCALE}px Avenir Next, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(COLOR_KEYS[color].toUpperCase(), x, y);
+  });
+}
+
+function drawFeedback(canvas, acc, correctColor) {
+  const ctx = canvas.getContext('2d');
+  const [cx, cy] = canvasCenter(canvas);
+  ctx.fillStyle = acc ? '#00FF00' : '#FF0000';
+  ctx.font = `bold ${72 * VISUAL_ANGLE_SCALE}px Avenir Next, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(acc ? 'O' : 'X', cx, cy);
+
+  // wrong trials also state the correct color below the X, since accuracy feedback alone doesn't
+  // tell the subject what they should have picked
+  if (!acc) {
+    drawPrompt(canvas, `The correct answer is ${capitalizeColorName(correctColor)}.`, -4 * VISUAL_ANGLE_SCALE);
+  }
+}
+
+// Ending the active jsPsych trial lets the timeline replay it from the beginning after a pause.
+// The wrapper is used only around response/stimulus trials, so a replay cannot save duplicate data.
+function makePauseableTrial(trials) {
+  return {
+    timeline: [
+      {
+        timeline: [{
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '',
+          choices: [' '],
+          data: { phase: 'pause_gate' },
+        }],
+        conditional_function: function () { return pauseActive; },
+      },
+      ...(Array.isArray(trials) ? trials : [trials]),
+    ],
+    on_timeline_start: function () {
+      setPauseHintVisible(true);
+    },
+    on_timeline_finish: function () { setPauseHintVisible(false); },
+    loop_function: function () { return pauseRequested; },
+  };
+}
+
+function makeFixationTrial() {
+  return {
+    type: jsPsychCanvasKeyboardResponse,
+    canvas_size: getCanvasSize,
+    stimulus: drawFixation,
+    choices: 'NO_KEYS',
+    trial_duration: 500,
+    data: { phase: 'fixation' },
+  };
+}
+
+function makeStimulusTrial(trial) {
+  if (trial.duration === undefined) {
+    throw new Error('stimulus trial is missing a duration');
+  }
+
+  return {
+    type: jsPsychCanvasKeyboardResponse,
+    canvas_size: getCanvasSize,
+    stimulus: function (canvas) { drawStimulus(canvas, trial); },
+    choices: 'NO_KEYS',
+    trial_duration: trial.duration,
+    data: { phase: 'stimulus' },
+  };
+}
+
+// only the colors actually shown in this trial are valid responses. `result` is a plain object
+// shared with this trial's confidence/feedback nodes so they don't need to re-query jsPsych's own
+// recorded data to find out what just happened
+function makeDecisionTrial(trial, result) {
+  const validKeys = trial.colors.map(c => COLOR_KEYS[c]);
+  return {
+    type: jsPsychCanvasKeyboardResponse,
+    canvas_size: getCanvasSize,
+    stimulus: function (canvas) {
+      drawPrompt(canvas, 'Which color had the most dots?');
+      drawColorLegend(canvas, trial.colors);
+    },
+    choices: validKeys,
+    data: { phase: 'decision' },
+    on_finish: function (data) {
+      const respColor = Object.keys(COLOR_KEYS).find(c => COLOR_KEYS[c] === data.response);
+      result.resp = respColor;
+      result.acc = respColor === trial.correct_color ? 1 : 0;
+      result.rt = data.rt / 1000;
+    },
+  };
+}
+
+function makeConfidenceTrial(result, onDone) {
+  return {
+    type: jsPsychCanvasKeyboardResponse,
+    canvas_size: getCanvasSize,
+    stimulus: function (canvas) { drawPrompt(canvas, 'How confident are you? (1 = low, 4 = high)'); },
+    choices: CONFIDENCE_KEYS,
+    data: { phase: 'confidence' },
+    on_finish: function (data) {
+      if (pauseRequested) return;
+      result.conf = Number(data.response);
+      result.c_rt = data.rt / 1000;
+      if (onDone) onDone();
+    },
+  };
+}
+
+function makeFeedbackTrial(trial, result) {
+  return {
+    type: jsPsychCanvasKeyboardResponse,
+    canvas_size: getCanvasSize,
+    stimulus: function (canvas) { drawFeedback(canvas, result.acc, trial.correct_color); },
+    choices: 'NO_KEYS',
+    trial_duration: 500,
+    data: { phase: 'feedback' },
+  };
+}
+
+</script>
+
+<script>
+// preview illustrations are rendered at PREVIEW_SCALE of the REAL on-screen stimulus/legend size,
+// reusing the actual degree-based sizes (APERTURE_RADIUS_DEG, DOT_RADIUS_DEG, drawColorLegend's
+// layout) converted through this session's real pxPerDeg -- available here because these screens
+// run after the virtual chinrest. rendered at PREVIEW_SUPERSAMPLE x the target size and displayed
+// at 1/PREVIEW_SUPERSAMPLE via the <img> width (see buildStimulusPreviewScreen below) so the image
+// stays crisp on high-DPI screens
+const PREVIEW_GAIN = 0.75;
+const PREVIEW_SCALE = 0.6;
+const PREVIEW_SUPERSAMPLE = 2;
+
+// renders a drawing function onto an offscreen canvas and returns it as a data URL, for embedding
+// as a static <img> inside instruction HTML
+function renderPreviewImage(widthPx, heightPx, drawFn) {
+  const canvas = document.createElement('canvas');
+  canvas.width = widthPx;
+  canvas.height = heightPx;
+  drawFn(canvas.getContext('2d'), widthPx / 2, heightPx / 2);
+  return canvas.toDataURL();
+}
+
+// example dot cloud at a fixed 75% luminance for all four colors -- same dot cloud generator
+// (buildCalibrationDotCloud) and real degree-based sizes as the actual calibration stimulus, just
+// scaled down to PREVIEW_SCALE of its real on-screen size
+function drawStimulusPreview(ctx, cx, cy) {
+  const gains = { orange: PREVIEW_GAIN, green: PREVIEW_GAIN, blue: PREVIEW_GAIN, magenta: PREVIEW_GAIN };
+  const gainedColors = getGainedColors(gains);
+  const pxPerDeg = getPxPerDeg() * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE;
+  const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
+
+  buildCalibrationDotCloud(CALIBRATION_DOTS_PER_COLOR).forEach(dot => {
+    ctx.beginPath();
+    ctx.arc(cx + dot.pos[0] * pxPerDeg, cy - dot.pos[1] * pxPerDeg, dotRadiusPx, 0, 2 * Math.PI);
+    ctx.fillStyle = gainedColors[dot.color];
+    ctx.fill();
+  });
+}
+
+// builds the stimulus-example instruction screen's HTML at trial runtime (not timeline-build
+// time), since getPxPerDeg() only resolves after the virtual chinrest trial has actually run --
+// passed to jsPsych as a stimulus function, evaluated when this trial starts
+function buildStimulusPreviewScreen() {
+  const pxPerDeg = getPxPerDeg() * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE;
+  const nativePx = Math.ceil(2 * APERTURE_RADIUS_DEG * pxPerDeg + 20);
+  const imgSrc = renderPreviewImage(nativePx, nativePx, drawStimulusPreview);
+  return buildColorCalibrationStimulusText(imgSrc, nativePx / PREVIEW_SUPERSAMPLE);
+}
+
+// final per-color gain is the average of the confirmed slider settings across every rep
+function computeAverageGains(repGains) {
+  const sums = { orange: 0, green: 0, blue: 0, magenta: 0 };
+  repGains.forEach(g => COLOR_NAMES.forEach(c => { sums[c] += g[c]; }));
+  const n = repGains.length;
+  const avg = {};
+  COLOR_NAMES.forEach(c => { avg[c] = sums[c] / n; });
+  return avg;
+}
+
+function buildColorTrialInfo(gains, subjectId, seed, trialIndex) {
+  const now = new Date();
+  return {
+    date: formatDate(now), time: formatTime(now),
+    sid: subjectId, seed: seed, trial: trialIndex,
+    gain_orange: gains.orange, gain_green: gains.green, gain_blue: gains.blue, gain_magenta: gains.magenta,
+  };
+}
+
+function colorRowToCsvLine(row) {
+  const fields = [
+    row.date, row.time, row.sid, row.seed, row.trial,
+    row.gain_orange, row.gain_green, row.gain_blue, row.gain_magenta,
+  ];
+  return fields.map(csvField).join(',');
+}
+
+// re-posts the whole accumulated calibration history after every rep, overwriting the file in
+// place server-side -- same crash-safe philosophy as saveSessionData. enqueueSave (expt_util.js)
+// adds retry-with-backoff and write-ordering, and shares its lastSaveOk/beforeunload guard with
+// the main session data saves
+function saveColorData(subjectId, rows) {
+  if (!serverAvailable) return Promise.resolve();
+  const csvText = COLOR_CSV_HEADER + '\n' + rows.map(colorRowToCsvLine).join('\n');
+  return enqueueSave('save_color.php', { subject_id: subjectId, csv: csvText });
+}
+
+// rebuilds calibration state from this subject's saved _COLOR.csv rows (empty array if the file
+// doesn't exist yet): each row is one confirmed rep, complete once N_COLOR_CALIBRATION_REPS have
+// been recorded -- crash-safe, mirrors how resolveSessionPlan resumes a partially-saved session
+function deriveColorCalibrationState(colorRows) {
+  if (!colorRows.length) {
+    return { complete: false, gains: { ...DEFAULT_COLOR_GAINS }, repGains: [], rows: [], trialIndex: 0 };
+  }
+
+  const repGains = colorRows.map(r => ({
+    orange: Number(r.gain_orange), green: Number(r.gain_green), blue: Number(r.gain_blue), magenta: Number(r.gain_magenta),
+  }));
+  const complete = repGains.length >= N_COLOR_CALIBRATION_REPS;
+
+  return {
+    complete,
+    gains: complete ? computeAverageGains(repGains) : { ...DEFAULT_COLOR_GAINS },
+    repGains,
+    rows: colorRows,
+    trialIndex: colorRows.length,
+  };
+}
+
+// canvas is sized to exactly fit the aperture (not the full window, unlike the main task's
+// stimulus canvas), since it sits alongside the slider sidebar rather than filling the screen
+function calibrationCanvasSizePx() {
+  const pxPerDeg = getPxPerDeg();
+  return Math.ceil(2 * APERTURE_RADIUS_DEG * pxPerDeg + 20);
+}
+
+// dot cloud canvas on the left, one labeled range slider per color plus a Confirm button on the
+// right -- built as a plain HTML string (like every other jsPsych trial in this codebase), wired
+// up via on_load in makeCalibrationRepTrial below
+function buildCalibrationTrialHtml() {
+  const canvasSizePx = calibrationCanvasSizePx();
+  const sliderRows = COLOR_NAMES.map(color => `
+    <div style="display:flex; flex-direction:column; margin-bottom:20px; width:240px;">
+      <label for="calib-slider-${color}" style="text-transform:capitalize; font-weight:bold; margin-bottom:4px;">${color}</label>
+      <input type="range" id="calib-slider-${color}" min="${CALIBRATION_FLOOR}" max="1" step="0.01">
+    </div>
+  `).join('');
+
+  return `
+    <div style="display:flex; align-items:center; justify-content:center; gap:60px;">
+      <canvas id="calib-canvas" width="${canvasSizePx}" height="${canvasSizePx}"></canvas>
+      <div style="display:flex; flex-direction:column; align-items:flex-start;">
+        <p style="font-size:1.2em; margin-bottom:16px; max-width:280px;">Adjust each slider until no one color looks more salient than the others.</p>
+        ${sliderRows}
+        <button id="calib-confirm-btn" style="font-size:1.1em; padding:8px 24px; margin-top:8px; align-self:center;">Confirm</button>
+      </div>
+    </div>
+  `;
+}
+
+// one calibration rep: dot positions are generated once (on_load) and never move again this rep --
+// only their rendered color updates as sliders are dragged, since repositioning dots on every
+// 'input' event would both be slow (rejection-sampled placement) and make brightness harder to
+// judge. sliders start at an independent random position per color per rep, so nothing anchors on
+// a previous rep's settings. Confirm calls jsPsych.finishTrial directly (this codebase's plugins
+// already reference the global `jsPsych` instance elsewhere, e.g. getPxPerDeg's jsPsych.data.get())
+// since html-keyboard-response with choices:'NO_KEYS' and no trial_duration otherwise never ends
+function makeCalibrationRepTrial(calibState, subjectId, seed) {
+  return {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: buildCalibrationTrialHtml,
+    choices: 'NO_KEYS',
+    data: { phase: 'color_calibration' },
+    on_load: function () {
+      const dotCloud = buildCalibrationDotCloud(CALIBRATION_DOTS_PER_COLOR);
+      const gains = {};
+      COLOR_NAMES.forEach(c => { gains[c] = CALIBRATION_FLOOR + Math.random() * (1 - CALIBRATION_FLOOR); });
+
+      const canvas = document.getElementById('calib-canvas');
+      const redraw = function () { drawCalibrationStimulus(canvas, dotCloud, gains); };
+
+      COLOR_NAMES.forEach(color => {
+        const slider = document.getElementById(`calib-slider-${color}`);
+        slider.value = gains[color];
+        slider.addEventListener('input', function () {
+          gains[color] = Number(slider.value);
+          redraw();
+        });
+      });
+      redraw();
+
+      document.getElementById('calib-confirm-btn').addEventListener('click', function () {
+        jsPsych.finishTrial({ gains: { ...gains } });
+      });
+    },
+    on_finish: function (data) {
+      calibState.trialIndex += 1;
+      calibState.repGains.push({ ...data.gains });
+      calibState.rows.push(buildColorTrialInfo(data.gains, subjectId, seed, calibState.trialIndex));
+      saveColorData(subjectId, calibState.rows);
+    },
+  };
+}
+
+// two-page calibration walkthrough (stimulus example, then task/slider explanation) shown before
+// the matching reps begin. pages is a function (not a precomputed array) so it renders at trial
+// runtime, once getPxPerDeg() actually resolves from the virtual chinrest trial that precedes this
+// timeline -- same jsPsychInstructions plugin, and the same mouse (show_clickable_nav) + Left/Right
+// arrow key navigation, as mainInstructionsTrial() in main_instructions.js
+function calibrationInstructionsTrial() {
+  return {
+    type: jsPsychInstructions,
+    pages: function () { return [buildStimulusPreviewScreen(), buildColorCalibrationMappingText()]; },
+    show_clickable_nav: true,
+    allow_backward: true,
+    key_forward: 'ArrowRight',
+    key_backward: 'ArrowLeft',
+    data: { phase: 'color_calibration_instructions' },
+  };
+}
+
+// runs (or resumes) N_COLOR_CALIBRATION_REPS matching reps, each preceded by its own fixation
+// (same Fixation -> Stimulus convention as every other trial in this codebase), then averages the
+// recorded per-rep gains into the final per-color gain and activates it
+function buildColorCalibrationTimeline(calibState, subjectId, seed) {
+  const timeline = [];
+  timeline.push(calibrationInstructionsTrial());
+
+  timeline.push({
+    timeline: [makeFixationTrial(), makeCalibrationRepTrial(calibState, subjectId, seed)],
+    loop_function: function () { return calibState.trialIndex < N_COLOR_CALIBRATION_REPS; },
+  });
+
+  timeline.push({
+    type: jsPsychCallFunction,
+    func: function () {
+      calibState.gains = computeAverageGains(calibState.repGains);
+      calibState.complete = true;
+      setActiveColors(calibState.gains);
+    },
+  });
+
+  return timeline;
+}
+
+</script>
+
+<script>
+// multi-page main-task instructions, shown once per session right after the color-calibration
+// slot (ACTIVE_COLORS is always resolved by then -- either a fresh staircase result this session,
+// or a prior session's saved gains, see runSession in session_flow.js). Pages are built at trial
+// runtime via a function (not a precomputed array), mirroring color_calibration.js's
+// buildStimulusPreviewScreen, since getPxPerDeg() only resolves after the virtual chinrest has
+// already run this session. Uses PREVIEW_SCALE/PREVIEW_SUPERSAMPLE from color_calibration.js so
+// the dot-cloud/legend illustrations read at the same scaled-down size as the calibration screens
+
+// fixed illustrative trial: a large gap between the top color and every distractor so the "MOST
+// dots" question has an obvious answer, well outside any real condition's difficulty range (the
+// closest real condition is [100, 60, 60, 60]). the top count matches this design's real top of
+// 100 so the illustration's density is representative
+const INSTRUCTION_FULL_TRIAL = { n_choice: 4, colors: COLOR_NAMES, counts: [100, 25, 25, 25], correct_color: 'orange' };
+
+// same illustrative trial restricted to 3 colors, to demonstrate the greyed-out legend shown on
+// n_choice < 4 trials. this experiment has no two-choice conditions, so the partial example is
+// 3-choice (the previous experiment's was 2-choice) -- showing a 2-color example here would
+// advertise a trial type the subject will never actually see
+const INSTRUCTION_PARTIAL_TRIAL = { n_choice: 3, colors: ['orange', 'green', 'blue'], counts: [100, 25, 25], correct_color: 'orange' };
+
+// draws one illustrative trial's dot cloud, scaled to PREVIEW_SCALE like color_calibration.js's
+// drawStimulusPreview, but colored via the resolved ACTIVE_COLORS palette rather than a
+// calibration gain, since these screens run after calibration is complete
+function drawInstructionDots(ctx, cx, cy, trial) {
+  const pxPerDeg = getPxPerDeg() * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE;
+  const dotRadiusPx = DOT_RADIUS_DEG * pxPerDeg;
+
+  buildDotCloud(trial).forEach(dot => {
+    ctx.beginPath();
+    ctx.arc(cx + dot.pos[0] * pxPerDeg, cy - dot.pos[1] * pxPerDeg, dotRadiusPx, 0, 2 * Math.PI);
+    ctx.fillStyle = ACTIVE_COLORS[dot.color];
+    ctx.fill();
+  });
+}
+
+// draws the fixed HJKL legend row, mirroring drawColorLegend's real geometry (expt_util.js)
+// scaled to PREVIEW_SCALE -- validColors controls which keys show their real color vs. the same
+// UNAVAILABLE_LEGEND_COLOR grey used on real trials with fewer than 4 colors
+function drawInstructionLegend(ctx, cx, cy, validColors) {
+  const pxPerDeg = getPxPerDeg() * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE;
+  const legendXDeg = [-9, -3, 3, 9].map(x => x * VISUAL_ANGLE_SCALE);
+  const rectWidthPx = 4 * VISUAL_ANGLE_SCALE * pxPerDeg;
+  const rectHeightPx = 3 * VISUAL_ANGLE_SCALE * pxPerDeg;
+
+  COLOR_NAMES.forEach((color, i) => {
+    const x = cx + legendXDeg[i] * pxPerDeg;
+    ctx.fillStyle = validColors.includes(color) ? ACTIVE_COLORS[color] : UNAVAILABLE_LEGEND_COLOR;
+    ctx.strokeStyle = 'white';
+    ctx.fillRect(x - rectWidthPx / 2, cy - rectHeightPx / 2, rectWidthPx, rectHeightPx);
+    ctx.strokeRect(x - rectWidthPx / 2, cy - rectHeightPx / 2, rectWidthPx, rectHeightPx);
+
+    ctx.fillStyle = 'black';
+    ctx.font = `bold ${20 * VISUAL_ANGLE_SCALE * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE}px Avenir Next, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(COLOR_KEYS[color].toUpperCase(), x, cy);
+  });
+}
+
+// canvas size + vertical anchor points for a dots(+legend) illustration -- wide enough for
+// whichever is wider (the aperture or the full legend row), tall enough to fit the legend below
+// the aperture only when this page actually shows one
+function computeDecisionPreviewLayout(showLegend) {
+  const pxPerDeg = getPxPerDeg() * PREVIEW_SCALE * PREVIEW_SUPERSAMPLE;
+  const apertureRadiusPx = APERTURE_RADIUS_DEG * pxPerDeg;
+  const legendGapPx = 3 * VISUAL_ANGLE_SCALE * pxPerDeg;
+  const legendHeightPx = 3 * VISUAL_ANGLE_SCALE * pxPerDeg;
+  const legendHalfSpanPx = (9 + 2) * VISUAL_ANGLE_SCALE * pxPerDeg;
+
+  const widthPx = Math.ceil(Math.max(2 * apertureRadiusPx, 2 * legendHalfSpanPx) + 20);
+  const apertureCy = 10 + apertureRadiusPx;
+  const belowAperturePx = showLegend ? legendGapPx + legendHeightPx : 0;
+  const heightPx = Math.ceil(apertureCy + apertureRadiusPx + belowAperturePx + 10);
+
+  return { widthPx, heightPx, apertureCy, legendCy: apertureCy + apertureRadiusPx + legendGapPx + legendHeightPx / 2 };
+}
+
+// renders one dots(+legend) illustration to a data URL for embedding in an instructions page
+function buildDecisionPreviewImage(trial, showLegend) {
+  const layout = computeDecisionPreviewLayout(showLegend);
+  const canvas = document.createElement('canvas');
+  canvas.width = layout.widthPx;
+  canvas.height = layout.heightPx;
+  const ctx = canvas.getContext('2d');
+
+  drawInstructionDots(ctx, layout.widthPx / 2, layout.apertureCy, trial);
+  if (showLegend) drawInstructionLegend(ctx, layout.widthPx / 2, layout.legendCy, trial.colors);
+
+  return { src: canvas.toDataURL(), displayWidthPx: layout.widthPx / PREVIEW_SUPERSAMPLE };
+}
+
+// confidence-screen illustration: literal readable prompt text, not shrunk by PREVIEW_SCALE like
+// the dots/legend illustrations above -- there's no aperture geometry to fit on the page, and this
+// text matches the real confidence trial's prompt exactly (see makeConfidenceTrial in expt_util.js)
+function buildConfidencePreviewImage() {
+  const widthPx = 620 * PREVIEW_SUPERSAMPLE;
+  const heightPx = 50 * PREVIEW_SUPERSAMPLE;
+  const canvas = document.createElement('canvas');
+  canvas.width = widthPx;
+  canvas.height = heightPx;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.font = `${24 * VISUAL_ANGLE_SCALE * PREVIEW_SUPERSAMPLE}px Avenir Next, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('How confident are you? (1 = low, 4 = high)', widthPx / 2, heightPx / 2);
+
+  return { src: canvas.toDataURL(), displayWidthPx: widthPx / PREVIEW_SUPERSAMPLE };
+}
+
+// six pages: (1) task goal with an easy example, (2) the same example's answer revealed, (3) the
+// full HJKL response mapping, (4) the greyed-out legend for <4-color trials, (5) the confidence
+// scale, (6) a review reminder plus a preview of the upcoming practice block's feedback structure
+// -- trial counts are read from the same config constants that build the practice blocks
+// (buildDay1PracticeBlocks/buildRepeatPracticeBlocks in triallist.js) so this text can't drift out
+// of sync with the actual practice trial counts
+function buildMainInstructionsPages(isFirstSession) {
+  const practiceFeedbackTrials = isFirstSession ? N_PRACTICE_MIXED_DAY1 : N_PRACTICE_MIXED_REPEAT;
+  const practiceNoFeedbackTrials = isFirstSession ? 0 : N_PRACTICE_MIXED_REPEAT;
+  const practiceTotalTrials = practiceFeedbackTrials + practiceNoFeedbackTrials;
+  const correctColorLabel = capitalizeColorName(INSTRUCTION_FULL_TRIAL.correct_color);
+  const correctColorKey = COLOR_KEYS[INSTRUCTION_FULL_TRIAL.correct_color].toUpperCase();
+  const fullImg = buildDecisionPreviewImage(INSTRUCTION_FULL_TRIAL, false);
+  const mappingImg = buildDecisionPreviewImage(INSTRUCTION_FULL_TRIAL, true);
+  const partialImg = buildDecisionPreviewImage(INSTRUCTION_PARTIAL_TRIAL, true);
+  const confidenceImg = buildConfidencePreviewImage();
+
+  return [
+    `<div style="font-size:1.4em;">
+      <p><img src="${fullImg.src}" style="width:${fullImg.displayWidthPx}px;"></p>
+      <p>In this task, you'll be seeing clouds of colored dots.</p>
+      <p>Your task is to decide which color has the MOST number of dots.</p>
+      <p>The dot cloud will be visible for varying, sometimes very brief amounts of time, followed by a flash of colored dots. This is expected.</p>
+    </div>`,
+    `<div style="font-size:1.4em;">
+      <p><img src="${fullImg.src}" style="width:${fullImg.displayWidthPx}px;"></p>
+      <p>In this example, the correct answer is ${correctColorLabel}.</p>
+    </div>`,
+    `<div style="font-size:1.4em;">
+      <p><img src="${mappingImg.src}" style="width:${mappingImg.displayWidthPx}px;"></p>
+      <p>To indicate your response, use H, J, K, or L to report the color with the most number of dots.</p>
+      <p>Since ${correctColorLabel} has the most dots in this example, press ${correctColorKey} to indicate your response.</p>
+      <p>This will be shown on every trial, so you do not have to remember them.</p>
+    </div>`,
+    `<div style="font-size:1.4em;">
+      <p><img src="${partialImg.src}" style="width:${partialImg.displayWidthPx}px;"></p>
+      <p>On trials with only 3 colors, the unavailable option is greyed out.</p>
+      <p>You will not be able to respond using those keys.</p>
+    </div>`,
+    `<div style="font-size:1.4em;">
+      <p><img src="${confidenceImg.src}" style="width:${confidenceImg.displayWidthPx}px;"></p>
+      <p>After indicating your decision, you will be asked to report your confidence.</p>
+      <p>1 = very low confidence</p>
+      <p>2 = low confidence</p>
+      <p>3 = high confidence</p>
+      <p>4 = very high confidence</p>
+    </div>`,
+    `<div style="font-size:1.4em;">
+      <p>If you're unsure about the task, please go back and review.</p>
+      <p>You will now perform ${practiceTotalTrials} practice trials${practiceNoFeedbackTrials
+        ? `. You will receive feedback for the first ${practiceFeedbackTrials} trials.`
+        : ', with feedback.'}</p>
+      <p>${practiceNoFeedbackTrials ? `No feedback will be given in the last ${practiceNoFeedbackTrials} trials and in ` : 'No feedback will be given in '}the experimental trials.</p>
+    </div>`,
+  ];
+}
+
+// Right Arrow (or the on-screen Next button) advances, Left Arrow (or Previous) goes back -- pages
+// is a function so it's rebuilt fresh (and re-reads ACTIVE_COLORS) every time this trial actually
+// runs. isFirstSession selects the day-1 vs. repeat-session practice trial counts on the last page
+function mainInstructionsTrial(isFirstSession) {
+  return {
+    type: jsPsychInstructions,
+    pages: () => buildMainInstructionsPages(isFirstSession),
+    show_clickable_nav: true,
+    allow_backward: true,
+    key_forward: 'ArrowRight',
+    key_backward: 'ArrowLeft',
+    data: { phase: 'main_instructions' },
+  };
+}
+
+</script>
+
+<script>
+function rowToCsvLine(row) {
+  const fields = [
+    row.date, row.time, row.sid, row.seed,
+    row.gain_orange, row.gain_green, row.gain_blue, row.gain_magenta,
+    row.session, row.trial, row.duration,
+    row.n_choice, row.condition_id, row.top, row.ratio_1, row.ratio_2, row.ratio_3,
+    `[${row.colors.join(',')}]`, `[${row.counts.join(',')}]`,
+    row.stim, row.resp, row.acc, row.rt, row.conf, row.c_rt,
+  ];
+  return fields.map(csvField).join(',');
+}
+
+// builds the saved-data row for one trial, mirrors the pilot's get_trial_info column-for-column
+// plus session/gain columns, with conf/c_rt populated (unlike the pilot, which always leaves them
+// blank). gains are this subject's resolved color-calibration result, constant across a session
+function buildTrialInfo(trial, result, subjectId, seed, trialIndex, gains) {
+  const now = new Date();
+  const ratios = [null, null, null];
+  trial.ratios.forEach((r, i) => { ratios[i] = r; });
+
+  return {
+    date: formatDate(now), time: formatTime(now),
+    sid: subjectId, seed: seed,
+    gain_orange: gains.orange, gain_green: gains.green, gain_blue: gains.blue, gain_magenta: gains.magenta,
+    session: trial.session, trial: trialIndex, duration: trial.duration,
+    n_choice: trial.n_choice, condition_id: trial.condition_id, top: trial.top,
+    ratio_1: ratios[0] ?? '', ratio_2: ratios[1] ?? '', ratio_3: ratios[2] ?? '',
+    colors: trial.colors.map(c => COLOR_CODES[c]),
+    counts: trial.counts,
+    stim: COLOR_CODES[trial.correct_color],
+    resp: COLOR_CODES[result.resp],
+    acc: result.acc, rt: result.rt, conf: result.conf, c_rt: result.c_rt,
+  };
+}
+
+// re-posts the WHOLE accumulated session so far after every trial, overwriting the file in place
+// server-side -- same crash-safe philosophy as the pilot's save_trial_data. enqueueSave (in
+// expt_util.js) adds retry-with-backoff and write-ordering on top of the plain fetch this used to be.
+// sessionData holds already-formatted CSV lines (see buildMainTimeline/runSession), not row objects,
+// so a resumed session's carried-forward lines (from progress.php) can sit alongside freshly-built
+// ones without re-parsing anything
+function saveSessionData(subjectId, session, sessionData) {
+  if (!serverAvailable) return Promise.resolve();
+  const csvText = CSV_HEADER + '\n' + sessionData.join('\n');
+  return enqueueSave('save.php', { subject_id: subjectId, session, csv: csvText });
+}
+
+// filename stem comes from DATA_PREFIX (config.js) rather than being hard-coded, so the client
+// download and the three php endpoints can't drift apart
+function sessionDataFilename(subjectId, session) {
+  return `${DATA_PREFIX}_${subjectId}_S${String(session).padStart(2, '0')}.csv`;
+}
+
+// any failure here -- fetch() throwing outright under file://, or a 404/non-JSON body when no
+// PHP handler exists -- is treated the same way: no server, so run fresh with no resume, and flip
+// serverAvailable so every later save this session skips straight to the local CSV download
+// instead of retrying against endpoints that were never going to answer
+async function fetchProgress(subjectId) {
+  try {
+    const res = await fetch(`progress.php?subject_id=${encodeURIComponent(subjectId)}`);
+    const body = await res.text();
+    return JSON.parse(body);
+  } catch (error) {
+    serverAvailable = false;
+    return { sessions: [], color_rows: [] };
+  }
+}
+
+// decides what to run next from the server's report of existing session files: resume a
+// partially-saved session (crash recovery, skips to the first unsaved trial), move on to the
+// next fresh session, or report the study complete. resumeLines carries forward the raw CSV lines
+// already on disk for a resumed session (progress.php now returns them, not just a row count) --
+// without this, saveSessionData would overwrite the file with only the post-resume trials and
+// silently discard every row saved before the crash
+function resolveSessionPlan(progress) {
+  const bySession = {};
+  progress.sessions.forEach(s => { bySession[s.session] = s; });
+
+  for (let s = N_SESSIONS; s >= 1; s--) {
+    if (bySession[s] !== undefined && bySession[s].rows < SESSION_SIZE) {
+      return { status: 'run', session: s, resumeFromTrial: bySession[s].rows, isFirstSession: s === 1, resumeLines: bySession[s].lines };
+    }
+  }
+
+  const completeSessions = Object.keys(bySession).map(Number).filter(s => bySession[s].rows >= SESSION_SIZE);
+  const nextSession = completeSessions.length ? Math.max(...completeSessions) + 1 : 1;
+
+  if (nextSession > N_SESSIONS) return { status: 'done' };
+  return { status: 'run', session: nextSession, resumeFromTrial: 0, isFirstSession: nextSession === 1, resumeLines: [] };
+}
+
+// shown before the virtual chinrest every session, including resumed ones -- chinrestTrial()
+// itself always runs regardless of resumeFromTrial, so this intro runs alongside it every time
+function chinrestIntroTrial(isFirstSession) {
+  return {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: isFirstSession ? CHINREST_INTRO_TEXT_FIRST : CHINREST_INTRO_TEXT_RETURNING,
+    choices: [' '],
+  };
+}
+
+function transitionMessageTrial() {
+  return { type: jsPsychHtmlKeyboardResponse, stimulus: buildTransitionText(), choices: 'ALL_KEYS' };
+}
+
+// countdown text is updated live via on_load/setInterval since html-keyboard-response's stimulus
+// is static markup -- interval is cleared on_finish whether the trial ends via timeout or the
+// subject skipping early with spacebar. percent complete is relative to the whole session
+// (SESSION_SIZE), not just the remaining trials passed into buildMainTimeline
+function buildBreakTimeline(trialIndex) {
+  const percentComplete = Math.round((trialIndex / SESSION_SIZE) * 100);
+  // trialIndex is always a multiple of N_TRIAL_TO_BREAK here (that's the trigger condition at the
+  // call site), so blocksCompleted is exact -- runs/blocks are both reported 1-indexed
+  const blocksCompleted = trialIndex / N_TRIAL_TO_BREAK;
+  const currentRun = Math.ceil(blocksCompleted / BLOCKS_PER_RUN);
+  const blockInRun = ((blocksCompleted - 1) % BLOCKS_PER_RUN) + 1;
+  let countdownInterval = null;
+
+  return [
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `
+        <p id="break-timer" style="font-size:4em;">${BREAK_DURATION}</p>
+        <p>Great, you've completed ${percentComplete}% of the trials for today, time to take a break.</p>
+        <p>If you wish to continue without a break, press spacebar.</p>
+      `,
+      choices: [' '],
+      trial_duration: BREAK_DURATION * 1000,
+      on_load: function () {
+        let remaining = BREAK_DURATION;
+        const timerEl = document.getElementById('break-timer');
+        countdownInterval = setInterval(function () {
+          remaining -= 1;
+          timerEl.textContent = Math.max(remaining, 0);
+        }, 1000);
+      },
+      on_finish: function () {
+        clearInterval(countdownInterval);
+      },
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `
+        <p>Press spacebar to continue to the next block.</p>
+        <p>RUN: ${currentRun}/${RUNS_PER_SESSION}</p>
+        <p>BLOCK: ${blockInRun}/${BLOCKS_PER_RUN}</p>
+      `,
+      choices: [' '],
+    },
+  ];
+}
+
+// practice trials always include confidence (the main experiment never skips it, unlike the
+// pilot's pilot=True flag) and are never saved to disk -- same convention as the pilot. feedback is
+// a per-block flag (see buildDay1PracticeBlocks/buildRepeatPracticeBlocks in triallist.js), since
+// some practice blocks are run without it
+function buildPracticeTimeline(trials, feedback) {
+  const nodes = [];
+  trials.forEach(trial => {
+    const result = {};
+    const trialTimeline = [
+      makeFixationTrial(),
+      makeStimulusTrial(trial),
+      makeDecisionTrial(trial, result),
+      makeConfidenceTrial(result),
+    ];
+    if (feedback) trialTimeline.push(makeFeedbackTrial(trial, result));
+    nodes.push(makePauseableTrial(trialTimeline));
+  });
+  return nodes;
+}
+
+// main trials: no feedback, confidence enabled, saved after every trial. startIndex lets a
+// resumed session continue the `trial` column where the last save left off. `calibState` is read
+// at on_finish time (not build time), so it always reflects this subject's resolved color gains
+// even though calibration finishes later in the same timeline than this function is called
+function buildMainTimeline(trials, subjectId, seed, session, sessionData, startIndex, calibState) {
+  const nodes = [];
+  trials.forEach((trial, i) => {
+    const trialIndex = startIndex + i;
+    if (trialIndex > 0 && trialIndex % N_TRIAL_TO_BREAK === 0) {
+      nodes.push(...buildBreakTimeline(trialIndex));
+    }
+
+    const result = {};
+    nodes.push(makePauseableTrial([
+      makeFixationTrial(),
+      makeStimulusTrial(trial),
+      makeDecisionTrial(trial, result),
+      makeConfidenceTrial(result, function () {
+        sessionData.push(rowToCsvLine(buildTrialInfo(trial, result, subjectId, seed, trialIndex, calibState.gains)));
+        saveSessionData(subjectId, session, sessionData);
+      }),
+    ]));
+  });
+  return nodes;
+}
+
+// local-backup screen shown at the end of every session, after the server save (enqueueSave, with
+// its own retries) has settled -- gives the subject their own copy on disk regardless of whether
+// the server-side copy succeeded. choices: 'NO_KEYS' plus a manual jsPsych.finishTrial() from the
+// button (same pattern as makeCalibrationRepTrial's confirm button) means the trial can't be
+// skipped without actually triggering the download
+function buildLocalSaveTrial(subjectId, session, sessionData) {
+  return {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <p>${LOCAL_SAVE_PROMPT_TEXT}</p>
+      <button id="local-save-btn" style="font-size:1.1em; padding:8px 24px;">Save Data to Computer</button>
+    `,
+    choices: 'NO_KEYS',
+    data: { phase: 'local_save_prompt' },
+    on_load: function () {
+      document.getElementById('local-save-btn').addEventListener('click', function () {
+        const csvText = CSV_HEADER + '\n' + sessionData.join('\n');
+        downloadCsvText(sessionDataFilename(subjectId, session), csvText);
+        jsPsych.finishTrial();
+      });
+    },
+  };
+}
+
+// waits for the server save to settle (success or every retry exhausted, see enqueueSave), reports
+// failure plainly instead of the old behavior of proceeding either way, then always prompts a local
+// download as a backup -- saveStatus is read by the next trial's stimulus function, which only runs
+// after this callFunction trial has already finished
+function sessionCompleteTimeline(subjectId, session, sessionData) {
+  const saveStatus = { ok: true };
+  return [
+    {
+      type: jsPsychCallFunction,
+      async: true,
+      func: function (done) {
+        lastSaveResponse.then(() => { saveStatus.ok = true; done(); })
+          .catch(() => { saveStatus.ok = false; done(); });
+      },
+    },
+    {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: function () { return saveStatus.ok ? SESSION_COMPLETE_TEXT : SAVE_FAILED_TEXT; },
+      choices: 'NO_KEYS',
+      trial_duration: 4000,
+      data: { phase: 'session_complete' },
+    },
+    buildLocalSaveTrial(subjectId, session, sessionData),
+  ];
+}
+
+function showCompletionScreen() {
+  document.getElementById('jspsych-target').innerHTML = STUDY_COMPLETE_TEXT;
+}
+
+function chinrestTrial() {
+  return {
+    type: jsPsychVirtualChinrest,
+    blindspot_reps: 3,
+    // resize_units 'none' skips the plugin's own CSS transform: scale() on the content
+    // container -- this codebase already converts degrees to pixels itself via getPxPerDeg(),
+    // so letting the plugin ALSO rescale the container would double-scale every stimulus
+    resize_units: 'none',
+    pixels_per_unit: 30,
+    item_path: 'data:image/png;base64,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',
+    viewing_distance_report: 'none',
+  };
+}
+
+// calibState resolves this subject's color gains: derived from any saved _COLOR.csv rows (see
+// deriveColorCalibrationState). If already complete (a prior session finished it, or this session
+// crashed after finishing it), the gains are activated up front and the calibration block is
+// skipped entirely; otherwise the calibration timeline is inserted before instructions/practice,
+// resuming from the next unrun rep if some reps were already saved. resumeLines is the raw CSV
+// lines already on disk for this session (empty for a fresh session) -- seeding sessionData with
+// them is what keeps a resumed session's first save from clobbering the pre-crash rows
+function runSession(subjectId, sessionNumber, resumeFromTrial, isFirstSession, calibState, resumeLines) {
+  const seed = seedForTrialLabel(subjectId);
+  const allSessions = buildSubjectSessions(subjectId);
+  const sessionTrials = allSessions[sessionNumber - 1];
+  const trialsToRun = sessionTrials.slice(resumeFromTrial);
+
+  // skip practice entirely when resuming mid-session after a crash -- only run it at the start
+  // of a fresh session
+  const practiceBlocks = resumeFromTrial === 0
+    ? (isFirstSession ? buildDay1PracticeBlocks(mulberry32(seed + 1)) : buildRepeatPracticeBlocks(mulberry32(seed + 1)))
+    : [];
+
+  const sessionData = [...resumeLines];
+  const timeline = [];
+
+  timeline.push({ type: jsPsychFullscreen, fullscreen_mode: true });
+  timeline.push(chinrestIntroTrial(isFirstSession));
+  timeline.push(chinrestTrial());
+
+  if (calibState.complete) {
+    setActiveColors(calibState.gains);
+  } else {
+    timeline.push(...buildColorCalibrationTimeline(calibState, subjectId, seed));
+  }
+
+  timeline.push(mainInstructionsTrial(isFirstSession));
+  practiceBlocks.forEach(block => timeline.push(...buildPracticeTimeline(block.trials, block.feedback)));
+  if (practiceBlocks.length) timeline.push(transitionMessageTrial());
+  timeline.push(...buildMainTimeline(trialsToRun, subjectId, seed, sessionNumber, sessionData, resumeFromTrial, calibState));
+  timeline.push(...sessionCompleteTimeline(subjectId, sessionNumber, sessionData));
+  timeline.push({ type: jsPsychFullscreen, fullscreen_mode: false });
+
+  jsPsych.run(timeline);
+}
+
+async function startExperiment(subjectId) {
+  const progress = await fetchProgress(subjectId);
+  const plan = resolveSessionPlan(progress);
+  const calibState = deriveColorCalibrationState(progress.color_rows || []);
+
+  document.getElementById('subject-entry').style.display = 'none';
+  document.getElementById('jspsych-target').style.display = 'block';
+
+  if (plan.status === 'done') {
+    showCompletionScreen();
+    return;
+  }
+
+  runSession(subjectId, plan.session, plan.resumeFromTrial, plan.isFirstSession, calibState, plan.resumeLines || []);
+}
+
+</script>
+
+<script>
+// entry point: sets up the jsPsych instance and wires the subject-id form to the session flow
+const jsPsych = initJsPsych({ display_element: 'jspsych-target' });
+
+// scales all HTML-rendered trial text (instructions, transitions, completion screens) by the
+// same VISUAL_ANGLE_SCALE factor used for every canvas-drawn size -- read by the CSS rule in
+// style.css via the --text-scale custom property
+document.documentElement.style.setProperty('--text-scale', VISUAL_ANGLE_SCALE);
+
+const subjectIdInput = document.getElementById('subject-id-input');
+
+const preCheckEl = document.getElementById('pre-check-screen');
+const subjectEntryEl = document.getElementById('subject-entry');
+const subjectConfirmEl = document.getElementById('subject-confirm');
+const subjectConfirmValueEl = document.getElementById('subject-confirm-value');
+const pauseOverlayEl = document.getElementById('pause-overlay');
+const pauseHintEl = document.createElement('div');
+pauseHintEl.id = 'pause-hint';
+pauseHintEl.textContent = 'Press P to pause';
+document.body.appendChild(pauseHintEl);
+
+let pauseRequested = false;
+let pauseActive = false;
+
+function setPauseHintVisible(visible) {
+  pauseHintEl.style.display = visible ? 'block' : 'none';
+}
+
+// typing into a text field (the trial-label input) shouldn't be intercepted as the pause
+// shortcut -- without this, typing a subject label containing "p" pauses the experiment before
+// it's even started
+function isTypingIntoField(event) {
+  const tag = event.target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || event.target.isContentEditable;
+}
+
+document.addEventListener('keydown', function handlePauseKey(event) {
+  if (isTypingIntoField(event)) return;
+  if (event.key.toLowerCase() === 'p' && !pauseActive && pauseHintEl.style.display !== 'none') {
+    event.preventDefault();
+    pauseRequested = true;
+    pauseActive = true;
+    pauseOverlayEl.style.display = 'flex';
+    jsPsych.finishTrial();
+    return;
+  }
+
+  if (event.key === ' ' && pauseActive) {
+    event.preventDefault();
+    pauseRequested = false;
+    pauseActive = false;
+    pauseOverlayEl.style.display = 'none';
+  }
+});
+
+// very first screen of the whole page load, shown before the trial label is even entered
+// -- spacebar reveals the subject-id form
+preCheckEl.innerHTML = PRE_CHECK_TEXT;
+document.addEventListener('keydown', function dismissPreCheck(event) {
+  if (event.key !== ' ') return;
+  document.removeEventListener('keydown', dismissPreCheck);
+  preCheckEl.style.display = 'none';
+  subjectEntryEl.style.display = 'flex';
+  subjectIdInput.focus();
+});
+
+// Enter and the on-screen button both submit through the form's native submit event.
+subjectEntryEl.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const errorEl = document.getElementById('subject-id-error');
+  const subjectId = subjectIdInput.value.trim();
+
+  if (!TRIAL_LABEL_PATTERN.test(subjectId)) {
+    errorEl.textContent = 'Use 1-40 letters, numbers, underscores, or hyphens.';
+    return;
+  }
+
+  errorEl.textContent = '';
+  subjectEntryEl.style.display = 'none';
+  subjectConfirmValueEl.textContent = subjectId;
+  subjectConfirmEl.style.display = 'flex';
+
+  // second enter press (on the confirmation screen) actually starts the experiment, giving the
+  // participant a chance to refresh instead if the number shown is wrong
+  document.addEventListener('keydown', async function confirmSubjectId(confirmEvent) {
+    if (confirmEvent.key !== 'Enter') return;
+    document.removeEventListener('keydown', confirmSubjectId);
+    subjectConfirmEl.style.display = 'none';
+    await startExperiment(subjectId);
+  });
+});
+
+</script>
+</html>
