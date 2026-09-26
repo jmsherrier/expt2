@@ -21,18 +21,23 @@ Eight conditions, specified in dot counts:
 reordering `CONDITIONS_CSV` in `js/conditions.js` renumbers saved data. Don't reorder after
 collection starts.
 
-**Trial budget (assumption, not specified):** 90 reps × 8 conditions = 720 trials,
-run as one session of 3 runs × 4 blocks × 60 trials. 720 is carried over from the previous
-experiment's per-session length and divides evenly by both 8 and 12. To change it, edit `N_REPS`,
-`N_SESSIONS`, `SESSION_SIZE` in `js/config.js` and keep
+**Trial budget:** 20 reps × 8 conditions = 160 trials, run as one session of 1 run × 2 blocks ×
+80 trials (a single break at the midpoint). Each condition's 20 reps split evenly across
+`STIMULUS_DURATIONS` (10 at 100ms, 10 at 600ms), so every condition runs at both durations. To
+change it, edit `N_REPS`, `N_SESSIONS`, `SESSION_SIZE` in `js/config.js` and keep
 
     N_REPS * 8 === N_SESSIONS * SESSION_SIZE
 
 with `SESSION_SIZE` divisible by `N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION`.
 
-Verified per subject: each session is exactly 720 trials, 90 per condition, 180 per correct
-color, and within any single condition the correct-color counts differ by at most 1. Trial lists
-are deterministic from the subject seed.
+Verified per subject (`verify_durations.js`): each session is exactly 160 trials, split exactly
+80/80 between 100ms and 600ms session-wide, and within any single `(n_choice, condition_id,
+correct_color)` cell the two durations' counts differ by at most 1. Trial lists are deterministic
+from the subject seed.
+
+Note: practice block sizes (`N_PRACTICE_EASY_DAY1` etc., 60 trials total) weren't changed as part
+of this -- at 160 main trials, practice is now a much bigger fraction of the session (~27%, versus
+~8% at the old 720-trial budget) than before. Worth revisiting if that feels disproportionate.
 
 ## What carries over unchanged
 
@@ -82,10 +87,11 @@ names no longer describe what's on screen and `drawFeedback` shows the literal c
 subjects.
 
 **Stimulus duration.** Each main and practice trial carries one duration from
-`STIMULUS_DURATIONS` (`150` or `400` ms currently). Durations are assigned with the seeded RNG
-after trial construction: each `(n_choice, condition_id, correct_color)` cell is balanced as
-evenly as possible, and session-wide counts are exactly equal when the session size allows it.
-The same balancing rule is applied to practice trials within each condition.
+`STIMULUS_DURATIONS` (`100` or `600` ms currently, chosen from the duration pilot below). Durations
+are assigned with the seeded RNG after trial construction: each `(n_choice, condition_id,
+correct_color)` cell is balanced as evenly as possible, and session-wide counts are exactly equal
+when the session size allows it (160 trials / 2 durations = 80 each). The same balancing rule is
+applied to practice trials within each condition.
 
 `STIMULUS_DURATIONS` remains a placeholder pending a pilot accuracy curve.
 
@@ -147,6 +153,8 @@ confidence is in hand, update `STIMULUS_DURATIONS` in `js/config.js` accordingly
 - `APERTURE_RADIUS_DEG` and `DOT_RADIUS_DEG` are still the original placeholders pending real
   display calibration. Max density here is 280 dots (`[100,80,65,35]`), below the previous
   experiment's, so rejection sampling has room — but the values are still unvalidated.
-- `STIMULUS_DURATIONS = [150, 400]` is still provisional pending the duration pilot above.
+- `STIMULUS_DURATIONS = [100, 600]` is set (each of the 8 conditions runs at both, 10 reps
+  apiece), but it hasn't itself been validated against a larger sample — the single-subject
+  duration and WOTO x duration pilots above are what it's based on.
 - Practice pools repeat conditions rather than sampling distinct ones (3 conditions across 20
   trials). Harmless — practice is never saved — but worth a look if you want more variety.

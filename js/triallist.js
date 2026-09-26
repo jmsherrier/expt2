@@ -12,7 +12,11 @@
 //      partway through and has to be reshuffled, exactly as buildPracticeTriallistFromPool
 //      already does below. without the refill the color picker would run off the end of an empty
 //      list and throw.
-function assignBalancedDurations(trials, keyFn, rng) {
+// keyFn is the fine-grained cell duration is balanced within (so it can't get correlated with,
+// e.g., correct color); correctionKeyFn is the coarser grouping the two-level fixup below targets
+// an exact split for (e.g. condition alone, ignoring color) -- defaults to keyFn so a single-key
+// caller (buildPracticeTriallistFromPool) is unaffected
+function assignBalancedDurations(trials, keyFn, rng, correctionKeyFn = keyFn) {
   const groups = {};
   trials.forEach(trial => {
     const key = keyFn(trial);
@@ -20,31 +24,48 @@ function assignBalancedDurations(trials, keyFn, rng) {
     groups[key].push(trial);
   });
 
-    const oddGroups = [];
-    Object.values(groups).forEach(group => {
-      const durations = Array.from({ length: group.length }, (_, i) =>
-        STIMULUS_DURATIONS[i % STIMULUS_DURATIONS.length]);
-      shuffle(durations, rng);
-      if (group.length % STIMULUS_DURATIONS.length !== 0) oddGroups.push({ group, durations });
-      group.forEach((trial, i) => { trial.duration = durations[i]; });
+  const oddGroups = [];
+  Object.values(groups).forEach(group => {
+    const durations = Array.from({ length: group.length }, (_, i) =>
+      STIMULUS_DURATIONS[i % STIMULUS_DURATIONS.length]);
+    shuffle(durations, rng);
+    if (group.length % STIMULUS_DURATIONS.length !== 0) oddGroups.push({ group, durations });
+    group.forEach((trial, i) => { trial.duration = durations[i]; });
+  });
+
+  // For the two-level manipulation, distribute odd-cell extras across levels so that EVERY
+  // correction-key's own trials land exactly half at each duration whenever that count is even --
+  // done per correction-key (not globally), so e.g. every condition hits an exact split instead of
+  // only the session as a whole. Odd-groups are only swapped against others sharing the same
+  // correction key, so a fix for one condition can't borrow from another's imbalance.
+  if (STIMULUS_DURATIONS.length === 2) {
+    const firstDuration = STIMULUS_DURATIONS[0];
+    const trialsByCorrectionKey = {};
+    trials.forEach(trial => {
+      const key = correctionKeyFn(trial);
+      (trialsByCorrectionKey[key] ||= []).push(trial);
+    });
+    const oddGroupsByCorrectionKey = {};
+    oddGroups.forEach(entry => {
+      const key = correctionKeyFn(entry.group[0]);
+      (oddGroupsByCorrectionKey[key] ||= []).push(entry);
     });
 
-    // For the two-level manipulation, distribute odd-cell extras across levels so a divisible
-    // session remains exactly half at each duration instead of inheriting one level's remainder.
-    if (STIMULUS_DURATIONS.length === 2) {
-      const firstDuration = STIMULUS_DURATIONS[0];
-      const firstCount = trials.filter(trial => trial.duration === firstDuration).length;
-      const targetFirst = Math.floor(trials.length / STIMULUS_DURATIONS.length);
+    Object.keys(trialsByCorrectionKey).forEach(key => {
+      const keyTrials = trialsByCorrectionKey[key];
+      const firstCount = keyTrials.filter(trial => trial.duration === firstDuration).length;
+      const targetFirst = Math.floor(keyTrials.length / STIMULUS_DURATIONS.length);
       const groupsToSwap = firstCount - targetFirst;
-      shuffle(oddGroups, rng);
-      oddGroups.slice(0, groupsToSwap).forEach(({ group }) => {
+      const odds = shuffle((oddGroupsByCorrectionKey[key] || []).slice(), rng);
+      odds.slice(0, groupsToSwap).forEach(({ group }) => {
         group.forEach(trial => {
           trial.duration = trial.duration === firstDuration
             ? STIMULUS_DURATIONS[1] : firstDuration;
         });
       });
-    }
+    });
   }
+}
 
 function buildSubjectSessions(subjectId) {
   const seed = seedForTrialLabel(subjectId);
@@ -110,7 +131,12 @@ function buildSubjectSessions(subjectId) {
   // balance duration inside each condition/color cell before order randomization, so the factor
   // cannot become correlated with either the condition or the correct response color
   sessions.forEach((session, s) => {
-    assignBalancedDurations(session, trial => `${trial.n_choice}:${trial.condition_id}:${trial.correct_color}`, rng);
+    assignBalancedDurations(
+      session,
+      trial => `${trial.n_choice}:${trial.condition_id}:${trial.correct_color}`,
+      rng,
+      trial => `${trial.n_choice}:${trial.condition_id}`,
+    );
     shuffle(session, rng);
     const durationCounts = {};
     session.forEach(trial => { durationCounts[trial.duration] = (durationCounts[trial.duration] || 0) + 1; });

@@ -20,15 +20,14 @@ function seedForTrialLabel(label) {
 // data directory is ever shared. mirrored in the three php endpoints.
 const DATA_PREFIX = 'MAFC2_EXPT';
 
-// trial-count design: 90 reps x 8 conditions = 720 trials, run as a SINGLE session.
-//   ASSUMPTION -- the design brief fixed the conditions but not the trial budget. 720 is carried
-//   over from the previous experiment's per-session size (~1 hour) and divides evenly by 8
-//   conditions (90 reps each) and by the 12 blocks below. To change the budget, keep
+// trial-count design: 20 reps x 8 conditions = 160 trials, run as a SINGLE session. Each
+// condition's 20 reps split evenly across STIMULUS_DURATIONS (10 at each duration), via the same
+// assignBalancedDurations machinery as before -- see triallist.js. To change the budget, keep
 //   N_REPS * (number of conditions) === N_SESSIONS * SESSION_SIZE, and keep SESSION_SIZE
 //   divisible by N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION.
-const N_REPS = 90;
+const N_REPS = 20;
 const N_SESSIONS = 1;
-const SESSION_SIZE = 720;
+const SESSION_SIZE = 160;
 
 // practice block sizes. day 1 (first-ever session): 20 easy-tier trials w/ feedback, 20
 // medium-tier w/ feedback, 20 easy+medium mixed w/o feedback = 60 total. every later session: 20
@@ -41,11 +40,11 @@ const N_PRACTICE_MEDIUM_DAY1 = 20;
 const N_PRACTICE_MIXED_DAY1 = 20;
 const N_PRACTICE_MIXED_REPEAT = 20;
 
-// each session is 3 runs x 4 blocks x 60 trials/block = 720, so a break falls at every block
-// boundary
-const N_TRIAL_TO_BREAK = 60;
-const RUNS_PER_SESSION = 3;
-const BLOCKS_PER_RUN = 4;
+// each session is 1 run x 2 blocks x 80 trials/block = 160, so there's a single break at the
+// midpoint
+const N_TRIAL_TO_BREAK = 80;
+const RUNS_PER_SESSION = 1;
+const BLOCKS_PER_RUN = 2;
 const BREAK_DURATION = 30;
 
 // single tunable knob for every visual-angle size in the experiment (aperture, dots, fixation,
@@ -66,17 +65,17 @@ const COLOR_KEYS = { orange: 'h', green: 'j', blue: 'k', magenta: 'l' };
 // response keys for the confidence phase, 1 (low) to 4 (high)
 const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
 
-// stimulus durations are placeholders pending a pilot accuracy curve.
-const STIMULUS_DURATIONS = [150, 400];
+// stimulus durations: short/long, chosen from the duration pilot (see README) -- each of the 8
+// conditions runs at both, 10 reps apiece.
+const STIMULUS_DURATIONS = [100, 600];
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.
 const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_magenta,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt';
 
-// color-matching calibration: 4 sliders (one per color), each dims that color's full-saturation
-// hex down toward black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed. no
-// slider goes above 1.0 since every base COLORS hex is already fully saturated (applyGain in
-// colors.js is a no-op for gain > 1). subject repeats the match N_COLOR_CALIBRATION_REPS times,
+// color-matching calibration: 4 sliders (one per color), each dims that color's base hex toward
+// black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed; the slider itself
+// never exceeds 1.0 (see colors.js). subject repeats the match N_COLOR_CALIBRATION_REPS times,
 // each starting from an independent random slider position, and the final per-color gain is the
 // average across all reps
 const CALIBRATION_FLOOR = 0.20;
