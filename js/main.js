@@ -25,7 +25,16 @@ function setPauseHintVisible(visible) {
   pauseHintEl.style.display = visible ? 'block' : 'none';
 }
 
+// typing into a text field (the trial-label input) shouldn't be intercepted as the pause
+// shortcut -- without this, typing a subject label containing "p" pauses the experiment before
+// it's even started
+function isTypingIntoField(event) {
+  const tag = event.target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || event.target.isContentEditable;
+}
+
 document.addEventListener('keydown', function handlePauseKey(event) {
+  if (isTypingIntoField(event)) return;
   if (event.key.toLowerCase() === 'p' && !pauseActive && pauseHintEl.style.display !== 'none') {
     event.preventDefault();
     pauseRequested = true;
