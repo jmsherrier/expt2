@@ -8,6 +8,15 @@ let lastSaveResponse = Promise.resolve();
 // exhausted every retry both correctly read as "not safely saved yet"
 let lastSaveOk = true;
 
+// set false the first time fetchProgress (session_flow.js) can't reach progress.php -- covers
+// both file:// (fetch throws outright) and a plain static host with no PHP handler (404, not
+// valid JSON). Once false, saveSessionData/saveColorData skip enqueueSave entirely instead of
+// retrying against endpoints that don't exist: without this, every trial's failed save would
+// retry with backoff (up to ~15s each) in a queue that falls further behind all session long, and
+// the session-complete screen would sit waiting on that backlog instead of moving straight to the
+// local CSV download (buildLocalSaveTrial), which works with no server either way
+let serverAvailable = true;
+
 // warns before the tab/window closes while the latest save hasn't been confirmed -- browsers
 // replace any custom message with their own generic prompt, but the listener has to call
 // preventDefault/set returnValue for that prompt to appear at all

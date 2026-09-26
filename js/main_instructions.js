@@ -116,10 +116,8 @@ function buildConfidencePreviewImage() {
 // (buildDay1PracticeBlocks/buildRepeatPracticeBlocks in triallist.js) so this text can't drift out
 // of sync with the actual practice trial counts
 function buildMainInstructionsPages(isFirstSession) {
-  const practiceFeedbackTrials = isFirstSession
-    ? N_PRACTICE_EASY_DAY1 + N_PRACTICE_MEDIUM_DAY1
-    : N_PRACTICE_MIXED_REPEAT;
-  const practiceNoFeedbackTrials = isFirstSession ? N_PRACTICE_MIXED_DAY1 : N_PRACTICE_MIXED_REPEAT;
+  const practiceFeedbackTrials = isFirstSession ? N_PRACTICE_MIXED_DAY1 : N_PRACTICE_MIXED_REPEAT;
+  const practiceNoFeedbackTrials = isFirstSession ? 0 : N_PRACTICE_MIXED_REPEAT;
   const practiceTotalTrials = practiceFeedbackTrials + practiceNoFeedbackTrials;
   const correctColorLabel = capitalizeColorName(INSTRUCTION_FULL_TRIAL.correct_color);
   const correctColorKey = COLOR_KEYS[INSTRUCTION_FULL_TRIAL.correct_color].toUpperCase();
@@ -160,8 +158,10 @@ function buildMainInstructionsPages(isFirstSession) {
     </div>`,
     `<div style="font-size:1.4em;">
       <p>If you're unsure about the task, please go back and review.</p>
-      <p>You will now perform ${practiceTotalTrials} trials. You will receive feedback for the first ${practiceFeedbackTrials} trials.</p>
-      <p>No feedback will be given in the last ${practiceNoFeedbackTrials} trials and in the experimental trials.</p>
+      <p>You will now perform ${practiceTotalTrials} practice trials${practiceNoFeedbackTrials
+        ? `. You will receive feedback for the first ${practiceFeedbackTrials} trials.`
+        : ', with feedback.'}</p>
+      <p>${practiceNoFeedbackTrials ? `No feedback will be given in the last ${practiceNoFeedbackTrials} trials and in ` : 'No feedback will be given in '}the experimental trials.</p>
     </div>`,
   ];
 }

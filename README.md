@@ -35,9 +35,9 @@ Verified per subject (`verify_durations.js`): each session is exactly 160 trials
 correct_color)` cell the two durations' counts differ by at most 1. Trial lists are deterministic
 from the subject seed.
 
-Note: practice block sizes (`N_PRACTICE_EASY_DAY1` etc., 60 trials total) weren't changed as part
-of this -- at 160 main trials, practice is now a much bigger fraction of the session (~27%, versus
-~8% at the old 720-trial budget) than before. Worth revisiting if that feels disproportionate.
+Day-1 practice is a single 20-trial easy+medium mixed block with feedback (`N_PRACTICE_MIXED_DAY1`
+in `js/config.js`), shrunk from the original 60 (20 easy w/ feedback, 20 medium w/ feedback, 20
+mixed w/o feedback) to keep practice proportionate to the smaller 160-trial main session.
 
 ## What carries over unchanged
 
@@ -130,10 +130,20 @@ next-session branch) are all left intact and still keyed off `isFirstSession`, s
 
 ## Deploy
 
-Copy the folder to a PHP-capable web root and open `index.html` over `http(s)://`, not `file://`
-(the endpoints are fetched relative to the page). PHP creates `data/` on first save; make sure
-the web server user can write to the folder. Then check `data/` for the two CSV files after a
-short run.
+**With a server (PHP-capable web root):** copy the folder, open `index.html` over `http(s)://`.
+PHP creates `data/` on first save; make sure the web server user can write to the folder. Every
+trial is saved to `save.php` as it happens (crash-safe, resumable), and `progress.php` is what
+resume reads back on reopen. Check `data/` for the two CSV files after a run.
+
+**Without a server:** `index.html` can just be opened directly (double-click, `file://`, or any
+plain static host with no PHP) -- `fetchProgress` (`js/session_flow.js`) detects there's no
+`progress.php` to reach and falls back to a fresh, non-resumable run, skipping every per-trial
+`save.php`/`save_color.php` call instead of retrying against endpoints that don't exist. Data
+isn't saved anywhere until the very end, where a "Save Data to Computer" button downloads the
+session CSV via the browser (same mechanism the standalone pilots below use). Trade-off: no
+crash recovery -- if the tab closes mid-session, that session's data is gone, so this mode is
+really only sensible at the current 160-trial (~15-20 min) budget, not the original 720-trial
+one-hour design.
 
 ## Duration pilot
 

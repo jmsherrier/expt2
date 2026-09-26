@@ -197,14 +197,11 @@ function buildPracticeTriallistFromPool(nTotal, pool, rng) {
   return trials;
 }
 
-// day-1 (first-ever session) practice: 20 easy-tier trials w/ feedback, 20 medium-tier w/
-// feedback, then 20 easy+medium mixed w/o feedback -- 60 total. this is the only practice path
-// that runs while N_SESSIONS is 1.
+// day-1 (first-ever session) practice: a single 20-trial easy+medium mixed block w/ feedback.
+// this is the only practice path that runs while N_SESSIONS is 1.
 function buildDay1PracticeBlocks(rng) {
   return [
-    { trials: buildPracticeTriallistFromPool(N_PRACTICE_EASY_DAY1, DIFFICULTY_TIERS.easy, rng), feedback: true },
-    { trials: buildPracticeTriallistFromPool(N_PRACTICE_MEDIUM_DAY1, DIFFICULTY_TIERS.medium, rng), feedback: true },
-    { trials: buildPracticeTriallistFromPool(N_PRACTICE_MIXED_DAY1, DIFFICULTY_TIERS.easyMedium, rng), feedback: false },
+    { trials: buildPracticeTriallistFromPool(N_PRACTICE_MIXED_DAY1, DIFFICULTY_TIERS.easyMedium, rng), feedback: true },
   ];
 }
 

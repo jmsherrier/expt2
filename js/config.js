@@ -29,14 +29,12 @@ const N_REPS = 20;
 const N_SESSIONS = 1;
 const SESSION_SIZE = 160;
 
-// practice block sizes. day 1 (first-ever session): 20 easy-tier trials w/ feedback, 20
-// medium-tier w/ feedback, 20 easy+medium mixed w/o feedback = 60 total. every later session: 20
-// easy+medium mixed w/ feedback, 20 more w/o feedback = 40 total. see DIFFICULTY_TIERS in
-// conditions.js and buildDay1PracticeBlocks/buildRepeatPracticeBlocks in triallist.js.
-// N_SESSIONS is 1 here, so only the day-1 blocks actually run -- the repeat path is kept intact
-// in case the design later grows to multiple sessions.
-const N_PRACTICE_EASY_DAY1 = 20;
-const N_PRACTICE_MEDIUM_DAY1 = 20;
+// practice block sizes. day 1 (first-ever session): a single 20-trial easy+medium mixed block
+// w/ feedback. every later session: 20 easy+medium mixed w/ feedback, 20 more w/o feedback = 40
+// total. see DIFFICULTY_TIERS in conditions.js and buildDay1PracticeBlocks/
+// buildRepeatPracticeBlocks in triallist.js. N_SESSIONS is 1 here, so only the day-1 block
+// actually runs -- the repeat path is kept intact in case the design later grows to multiple
+// sessions.
 const N_PRACTICE_MIXED_DAY1 = 20;
 const N_PRACTICE_MIXED_REPEAT = 20;
 

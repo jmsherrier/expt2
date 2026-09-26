@@ -77,6 +77,7 @@ function colorRowToCsvLine(row) {
 // adds retry-with-backoff and write-ordering, and shares its lastSaveOk/beforeunload guard with
 // the main session data saves
 function saveColorData(subjectId, rows) {
+  if (!serverAvailable) return Promise.resolve();
   const csvText = COLOR_CSV_HEADER + '\n' + rows.map(colorRowToCsvLine).join('\n');
   return enqueueSave('save_color.php', { subject_id: subjectId, csv: csvText });
 }

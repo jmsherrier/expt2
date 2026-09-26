@@ -40,6 +40,7 @@ function buildTrialInfo(trial, result, subjectId, seed, trialIndex, gains) {
 // so a resumed session's carried-forward lines (from progress.php) can sit alongside freshly-built
 // ones without re-parsing anything
 function saveSessionData(subjectId, session, sessionData) {
+  if (!serverAvailable) return Promise.resolve();
   const csvText = CSV_HEADER + '\n' + sessionData.join('\n');
   return enqueueSave('save.php', { subject_id: subjectId, session, csv: csvText });
 }
@@ -50,13 +51,17 @@ function sessionDataFilename(subjectId, session) {
   return `${DATA_PREFIX}_${subjectId}_S${String(session).padStart(2, '0')}.csv`;
 }
 
+// any failure here -- fetch() throwing outright under file://, or a 404/non-JSON body when no
+// PHP handler exists -- is treated the same way: no server, so run fresh with no resume, and flip
+// serverAvailable so every later save this session skips straight to the local CSV download
+// instead of retrying against endpoints that were never going to answer
 async function fetchProgress(subjectId) {
-  const res = await fetch(`progress.php?subject_id=${encodeURIComponent(subjectId)}`);
-  const body = await res.text();
   try {
+    const res = await fetch(`progress.php?subject_id=${encodeURIComponent(subjectId)}`);
+    const body = await res.text();
     return JSON.parse(body);
   } catch (error) {
-    if (!['localhost', '127.0.0.1'].includes(location.hostname)) throw error;
+    serverAvailable = false;
     return { sessions: [], color_rows: [] };
   }
 }
