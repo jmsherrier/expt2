@@ -30,7 +30,7 @@ function buildPilotTrials() {
 function pilotChinrestTrial() {
   return {
     type: jsPsychVirtualChinrest,
-    blindspot_reps: 3,
+    blindspot_reps: 2,
     resize_units: 'none',
     pixels_per_unit: 30,
     item_path: 'img/card.png',

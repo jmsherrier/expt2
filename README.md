@@ -126,6 +126,16 @@ fill the CSV's `sid` column, but nobody types anything, and the downloaded file 
 `DATA_PREFIX`-based filename builder are gone from `js/config.js`/`js/session_flow.js`
 accordingly; the three PHP endpoints (used only in server-backed mode) are unaffected.
 
+**Chinrest distance reps, 3 -> 2.** `blindspot_reps` on every `jsPsychVirtualChinrest` trial
+(the main experiment and all three standalone pilots) dropped from 3 to 2.
+
+**Feedback duration now depends on accuracy.** Doby reported not having enough time to read the
+"The correct answer is X." text before the next trial started during the practice block. Correct
+trials (just the O) still hold 500ms; wrong trials (O/X plus a full sentence) now hold 1800ms
+(`FEEDBACK_DURATION_CORRECT`/`FEEDBACK_DURATION_WRONG` in `js/expt_util.js`) -- `trial_duration`
+is now a function reading `result.acc` instead of a flat 500ms, so only the trials that actually
+have text to read get the longer hold.
+
 **Single-session wording.** The chinrest intro no longer says "access to this monitor for the
 next 10 weeks", the pre-check no longer asks about matching a previous session's monitor, and the
 completion screen no longer says "return next week". The multi-session code paths

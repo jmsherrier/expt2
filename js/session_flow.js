@@ -253,7 +253,7 @@ function showCompletionScreen() {
 function chinrestTrial() {
   return {
     type: jsPsychVirtualChinrest,
-    blindspot_reps: 3,
+    blindspot_reps: 2,
     // resize_units 'none' skips the plugin's own CSS transform: scale() on the content
     // container -- this codebase already converts degrees to pixels itself via getPxPerDeg(),
     // so letting the plugin ALSO rescale the container would double-scale every stimulus
