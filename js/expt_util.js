@@ -350,12 +350,9 @@ function makeConfidenceTrial(result, onDone) {
   };
 }
 
-// correct trials only ever show the O, so 500ms is plenty; wrong trials also carry a full
-// sentence ("The correct answer is X.") and needed longer -- Doby reported not having enough
-// time to read it before the next trial started. Only the trials that actually have text to read
-// get the longer hold, so a feedback block full of correct answers doesn't slow down needlessly
-const FEEDBACK_DURATION_CORRECT = 500;
-const FEEDBACK_DURATION_WRONG = 1800;
+// flat hold for every feedback trial, correct or wrong -- Doby reported not having enough time
+// to read "The correct answer is X." before the next trial started at the old 500ms
+const FEEDBACK_DURATION = 700;
 
 function makeFeedbackTrial(trial, result) {
   return {
@@ -363,7 +360,7 @@ function makeFeedbackTrial(trial, result) {
     canvas_size: getCanvasSize,
     stimulus: function (canvas) { drawFeedback(canvas, result.acc, trial.correct_color); },
     choices: 'NO_KEYS',
-    trial_duration: function () { return result.acc ? FEEDBACK_DURATION_CORRECT : FEEDBACK_DURATION_WRONG; },
+    trial_duration: FEEDBACK_DURATION,
     data: { phase: 'feedback' },
   };
 }
