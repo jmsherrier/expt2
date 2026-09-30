@@ -95,7 +95,18 @@ function pilotDownloadTrial(rows) {
   };
 }
 
-const jsPsych = initJsPsych({ display_element: 'jspsych-target' });
+// blurs a still-focused button left over from the previous trial -- without this, a stale-
+// focused button (e.g. the chinrest card-resize screen's confirm button) can intercept the next
+// trial's Space/Enter as a re-click of itself instead, which is what makes the chinrest's
+// blind-spot screen need an extra mouse click before spacebar works
+const jsPsych = initJsPsych({
+  display_element: 'jspsych-target',
+  on_trial_finish: function () {
+    if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+      document.activeElement.blur();
+    }
+  },
+});
 const pilotTrials = buildPilotTrials();
 const pilotRows = [];
 

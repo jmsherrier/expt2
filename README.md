@@ -129,9 +129,20 @@ accordingly; the three PHP endpoints (used only in server-backed mode) are unaff
 **Chinrest distance reps, 3 -> 2.** `blindspot_reps` on every `jsPsychVirtualChinrest` trial
 (the main experiment and all three standalone pilots) dropped from 3 to 2.
 
-**Feedback duration, 500ms -> 700ms.** Doby reported not having enough time to read the "The
+**Feedback duration, 500ms -> 900ms.** Doby reported not having enough time to read the "The
 correct answer is X." text before the next trial started during the practice block.
 `FEEDBACK_DURATION` in `js/expt_util.js`, flat for every feedback trial regardless of accuracy.
+
+**Stale button focus no longer eats the next trial's keypress.** A clicked `<button>` keeps
+keyboard focus into the next trial; natively, Space/Enter on a focused button re-clicks it
+instead of reaching that next trial's own listener. This is what made the chinrest's blind-spot
+"press space to begin" screen need an extra mouse click before spacebar worked (right after
+clicking the card-resize screen's confirm button) -- and is the likely cause of occasional rapid
+double-advances ("flashes") through a screen right after any button-click transition. Fixed
+globally via `on_trial_finish` in every `initJsPsych(...)` call (main experiment and all three
+pilots): blurs `document.activeElement` if it's still a `<button>` when a trial ends. Verified
+live: `document.activeElement` is `BODY`, not the button, on the blind-spot screen after clicking
+through the card-resize step.
 
 **Single-session wording.** The chinrest intro no longer says "access to this monitor for the
 next 10 weeks", the pre-check no longer asks about matching a previous session's monitor, and the

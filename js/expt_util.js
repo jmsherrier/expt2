@@ -352,7 +352,7 @@ function makeConfidenceTrial(result, onDone) {
 
 // flat hold for every feedback trial, correct or wrong -- Doby reported not having enough time
 // to read "The correct answer is X." before the next trial started at the old 500ms
-const FEEDBACK_DURATION = 700;
+const FEEDBACK_DURATION = 900;
 
 function makeFeedbackTrial(trial, result) {
   return {
