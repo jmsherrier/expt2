@@ -45,10 +45,10 @@ function saveSessionData(subjectId, session, sessionData) {
   return enqueueSave('save.php', { subject_id: subjectId, session, csv: csvText });
 }
 
-// filename stem comes from DATA_PREFIX (config.js) rather than being hard-coded, so the client
-// download and the three php endpoints can't drift apart
-function sessionDataFilename(subjectId, session) {
-  return `${DATA_PREFIX}_${subjectId}_S${String(session).padStart(2, '0')}.csv`;
+// no subject label to build a meaningful name from anymore -- the researcher renames the
+// downloaded file themself
+function sessionDataFilename() {
+  return 'rename.csv';
 }
 
 // any failure here -- fetch() throwing outright under file://, or a 404/non-JSON body when no
@@ -213,7 +213,7 @@ function buildLocalSaveTrial(subjectId, session, sessionData) {
     on_load: function () {
       document.getElementById('local-save-btn').addEventListener('click', function () {
         const csvText = CSV_HEADER + '\n' + sessionData.join('\n');
-        downloadCsvText(sessionDataFilename(subjectId, session), csvText);
+        downloadCsvText(sessionDataFilename(), csvText);
         jsPsych.finishTrial();
       });
     },
@@ -311,7 +311,6 @@ async function startExperiment(subjectId) {
   const plan = resolveSessionPlan(progress);
   const calibState = deriveColorCalibrationState(progress.color_rows || []);
 
-  document.getElementById('subject-entry').style.display = 'none';
   document.getElementById('jspsych-target').style.display = 'block';
 
   if (plan.status === 'done') {

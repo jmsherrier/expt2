@@ -14,7 +14,7 @@
   <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css">
   <link rel="stylesheet" href="style.css">
 
-  <script src="js/config.js?v=2"></script>
+  <script src="js/config.js?v=3"></script>
   <script src="js/colors.js?v=2"></script>
   <script src="js/conditions.js"></script>
   <script src="js/rng.js"></script>
@@ -24,21 +24,11 @@
   <script src="js/expt_util.js?v=3"></script>
   <script src="js/color_calibration.js?v=2"></script>
   <script src="js/main_instructions.js?v=2"></script>
-  <script src="js/session_flow.js?v=3"></script>
+  <script src="js/session_flow.js?v=4"></script>
 </head>
 
 <body>
   <div id="pre-check-screen"></div>
-  <form id="subject-entry" style="display: none;">
-    <h2>Enter a trial label</h2>
-    <input type="text" id="subject-id-input" maxlength="40" autocomplete="off" placeholder="e.g. trial-001">
-    <p id="subject-id-error"></p>
-    <button type="submit">Continue</button>
-  </form>
-  <div id="subject-confirm" style="display: none;">
-    <p id="subject-confirm-number"><span id="subject-confirm-value"></span></p>
-    <p id="subject-confirm-continue">Press Enter to continue.</p>
-  </div>
   <div id="jspsych-target" style="display: none;"></div>
   <div id="pause-overlay" style="display: none;" role="dialog" aria-live="polite">
     <p>Try to minimize time paused if possible.</p>
@@ -46,5 +36,5 @@
   </div>
 </body>
 
-<script src="js/main.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
 </html>

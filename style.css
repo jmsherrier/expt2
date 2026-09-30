@@ -20,41 +20,6 @@ html, body {
   gap: 12px;
 }
 
-#subject-entry {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  gap: 12px;
-}
-
-#subject-id-error {
-  color: #cc0000;
-  min-height: 1.2em;
-}
-
-#subject-confirm {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  gap: 12px;
-  font-weight: bold;
-}
-
-#subject-confirm-number {
-  font-size: 4rem;
-}
-
-#subject-id-input {
-  font-size: 2rem;
-  width: min(24rem, 70vw);
-  text-align: center;
-  padding: 8px;
-}
-
 /* jsPsych's own display-element/content-wrapper chain has no definite height by default, so
    flex centering has nothing to center within -- pin the whole chain to the viewport size.
    font-size is scaled here (overriding jspsych.css's fixed 18px) and on #jspsych-target below

@@ -129,9 +129,9 @@ function seedForTrialLabel(label) {
 // assignBalancedDurations machinery as before -- see triallist.js. To change the budget, keep
 //   N_REPS * (number of conditions) === N_SESSIONS * SESSION_SIZE, and keep SESSION_SIZE
 //   divisible by N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION.
-const N_REPS = 20;
+const N_REPS = 50;
 const N_SESSIONS = 1;
-const SESSION_SIZE = 160;
+const SESSION_SIZE = 400;
 
 // practice block sizes. day 1 (first-ever session): a single 20-trial easy+medium mixed block
 // w/ feedback. every later session: 20 easy+medium mixed w/ feedback, 20 more w/o feedback = 40
@@ -146,7 +146,7 @@ const N_PRACTICE_MIXED_REPEAT = 20;
 // midpoint
 const N_TRIAL_TO_BREAK = 80;
 const RUNS_PER_SESSION = 1;
-const BLOCKS_PER_RUN = 2;
+const BLOCKS_PER_RUN = 5;
 const BREAK_DURATION = 30;
 
 // single tunable knob for every visual-angle size in the experiment (aperture, dots, fixation,

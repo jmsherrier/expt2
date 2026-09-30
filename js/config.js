@@ -1,10 +1,8 @@
 // fixed per-subject seeds, arbitrary but documented -- this app only needs to be internally
 // deterministic/reproducible. DELIBERATELY DIFFERENT from the previous experiment's seeds so a
 // subject who took part in both doesn't get a correlated trial order across the two studies.
-// trial labels are used as data identifiers and as the input to the deterministic seed below.
-// Keep this character set in sync with save.php, save_color.php, and progress.php.
-const TRIAL_LABEL_PATTERN = /^[A-Za-z0-9_-]{1,40}$/;
-
+// there's no user-entered trial label anymore (main.js generates a timestamp-based run id
+// instead) -- this just hashes whatever string it's given into a seed
 function seedForTrialLabel(label) {
   label = String(label);
   let hash = 2166136261;
@@ -14,11 +12,6 @@ function seedForTrialLabel(label) {
   }
   return hash >>> 0;
 }
-
-// filename stem for saved data: <prefix>_<label>_S01.csv / <prefix>_<label>_COLOR.csv. distinct from the
-// previous experiment's MAFC_EXPT so the two studies' data files can never collide even if a
-// data directory is ever shared. mirrored in the three php endpoints.
-const DATA_PREFIX = 'MAFC2_EXPT';
 
 // trial-count design: 20 reps x 8 conditions = 160 trials, run as a SINGLE session. Each
 // condition's 20 reps split evenly across STIMULUS_DURATIONS (10 at each duration), via the same
@@ -64,8 +57,8 @@ const COLOR_KEYS = { orange: 'h', green: 'j', blue: 'k', magenta: 'l' };
 const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
 
 // stimulus durations: short/long, chosen from the duration pilot (see README) -- each of the 8
-// conditions runs at both, 10 reps apiece.
-const STIMULUS_DURATIONS = [100, 600];
+// conditions runs at both.
+const STIMULUS_DURATIONS = [200, 500];
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.
