@@ -54,7 +54,7 @@ not byte-for-byte identical to the previous experiment's header. `top` is `count
 During practice and main trials, participants can press `P` to pause. A pause screen asks them to
 minimize paused time and press the spacebar to resume; resuming restarts the current trial from
 the fixation screen. Pausing during confidence does not save a partial response. A screen between
-the practice block and the main trials (`PAUSE_WARNING_TEXT` in `js/config.js`) tells
+the practice block and the main trials, right after the "Good job!" screen (`PAUSE_WARNING_TEXT` in `js/config.js`) tells
 participants that pausing resets a trial and should only be used if they completely missed one.
 The break screen also asks them to take a slightly longer break if they feel lazy or distracted;
 the "Press spacebar to continue to the next block" screen after the 30 s countdown waits
