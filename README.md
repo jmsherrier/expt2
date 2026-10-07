@@ -23,7 +23,7 @@ collection starts.
 
 **Trial budget:** 20 reps × 8 conditions = 160 trials, run as one session of 1 run × 2 blocks ×
 80 trials (a single break at the midpoint). Each condition's 20 reps split evenly across
-`STIMULUS_DURATIONS` (10 at 200ms, 10 at 500ms), so every condition runs at both durations. To
+`STIMULUS_DURATIONS` (10 at 150ms, 10 at 500ms), so every condition runs at both durations. To
 change it, edit `N_REPS`, `N_SESSIONS`, `SESSION_SIZE` in `js/config.js` and keep
 
     N_REPS * 8 === N_SESSIONS * SESSION_SIZE
@@ -31,7 +31,7 @@ change it, edit `N_REPS`, `N_SESSIONS`, `SESSION_SIZE` in `js/config.js` and kee
 with `SESSION_SIZE` divisible by `N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION`.
 
 Verified per subject (`verify_durations.js`): each session is exactly 160 trials, split exactly
-80/80 between 200ms and 500ms session-wide, and within any single `(n_choice, condition_id,
+80/80 between 150ms and 500ms session-wide, and within any single `(n_choice, condition_id,
 correct_color)` cell the two durations' counts differ by at most 1. Trial lists are deterministic
 from a run seed (no subject-entered label anymore -- see "Trial labels, then no trial label"
 under "What changed").
@@ -53,7 +53,12 @@ not byte-for-byte identical to the previous experiment's header. `top` is `count
 
 During practice and main trials, participants can press `P` to pause. A pause screen asks them to
 minimize paused time and press the spacebar to resume; resuming restarts the current trial from
-the fixation screen. Pausing during confidence does not save a partial response.
+the fixation screen. Pausing during confidence does not save a partial response. A screen between
+the practice block and the main trials (`PAUSE_WARNING_TEXT` in `js/config.js`) tells
+participants that pausing resets a trial and should only be used if they completely missed one.
+The break screen also asks them to take a slightly longer break if they feel lazy or distracted;
+the "Press spacebar to continue to the next block" screen after the 30 s countdown waits
+indefinitely, so a longer break needs no extra code.
 
 **Pause fix (Oct 2026).** Before this, pausing anywhere except the confidence screen was broken in
 two ways, and both showed up as malformed rows in the 400-trial pilot (trials 52, 201, 202):
@@ -106,7 +111,7 @@ names no longer describe what's on screen and `drawFeedback` shows the literal c
 subjects.
 
 **Stimulus duration.** Each main and practice trial carries one duration from
-`STIMULUS_DURATIONS` (`200` or `500` ms currently, chosen from the duration pilot below). Durations
+`STIMULUS_DURATIONS` (`150` or `500` ms currently, chosen from the duration pilot below). Durations
 are assigned with the seeded RNG after trial construction: each `(n_choice, condition_id,
 correct_color)` cell is balanced as evenly as possible, and session-wide counts are exactly equal
 when the session size allows it (160 trials / 2 durations = 80 each). The same balancing rule is
@@ -203,7 +208,7 @@ The second argument is an optional JSON object of `js/config.js` constants to ov
 one build only -- `js/config.js` on disk is never touched. Two builds currently exist:
 `index-standalone.html` (the canonical 20-reps/condition, 160-trial config, for Doby) and
 `index-standalone-joseph.html` (50 reps/condition, 400 trials, one longer run for a fuller
-single-subject sample). Both run the same 8 conditions x `STIMULUS_DURATIONS` (200/500ms)
+single-subject sample). Both run the same 8 conditions x `STIMULUS_DURATIONS` (150/500ms)
 design, just at different sample sizes.
 
 ## Duration pilot
@@ -224,7 +229,7 @@ confidence is in hand, update `STIMULUS_DURATIONS` in `js/config.js` accordingly
 - `APERTURE_RADIUS_DEG` and `DOT_RADIUS_DEG` are still the original placeholders pending real
   display calibration. Max density here is 280 dots (`[100,80,65,35]`), below the previous
   experiment's, so rejection sampling has room — but the values are still unvalidated.
-- `STIMULUS_DURATIONS = [200, 500]` is set (each of the 8 conditions runs at both, 10 reps
+- `STIMULUS_DURATIONS = [150, 500]` is set (each of the 8 conditions runs at both, 10 reps
   apiece), but it hasn't itself been validated against a larger sample — the single-subject
   duration and WOTO x duration pilots above are what it's based on.
 - Practice pools repeat conditions rather than sampling distinct ones (3 conditions across 20

@@ -122,6 +122,7 @@ function buildBreakTimeline(trialIndex) {
       stimulus: `
         <p id="break-timer" style="font-size:4em;">${BREAK_DURATION}</p>
         <p>Great, you've completed ${percentComplete}% of the trials for today, time to take a break.</p>
+        <p>If you feel yourself getting lazy or distracted, please take a slightly longer break.</p>
         <p>If you wish to continue without a break, press spacebar.</p>
       `,
       choices: [' '],
@@ -298,7 +299,10 @@ function runSession(subjectId, sessionNumber, resumeFromTrial, isFirstSession, c
 
   timeline.push(mainInstructionsTrial(isFirstSession));
   practiceBlocks.forEach(block => timeline.push(...buildPracticeTimeline(block.trials, block.feedback)));
-  if (practiceBlocks.length) timeline.push(transitionMessageTrial());
+  if (practiceBlocks.length) {
+    timeline.push({ type: jsPsychHtmlKeyboardResponse, stimulus: PAUSE_WARNING_TEXT, choices: [' '] });
+    timeline.push(transitionMessageTrial());
+  }
   timeline.push(...buildMainTimeline(trialsToRun, subjectId, seed, sessionNumber, sessionData, resumeFromTrial, calibState));
   timeline.push(...sessionCompleteTimeline(subjectId, sessionNumber, sessionData));
   timeline.push({ type: jsPsychFullscreen, fullscreen_mode: false });

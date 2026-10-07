@@ -58,7 +58,7 @@ const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
 
 // stimulus durations: short/long, chosen from the duration pilot (see README) -- each of the 8
 // conditions runs at both.
-const STIMULUS_DURATIONS = [200, 500];
+const STIMULUS_DURATIONS = [150, 500];
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.
@@ -138,6 +138,15 @@ function buildColorCalibrationMappingText() {
     </div>
   `;
 }
+
+// shown once, between the practice block and the main trials
+const PAUSE_WARNING_TEXT = `
+  <div style="font-size:1.4em;">
+    <p>Pausing before choosing an answer or confidence rating resets a trial.</p>
+    <p>Please only do this on purpose if you COMPLETELY missed a trial.</p>
+    <p>Press spacebar to continue.</p>
+  </div>
+`;
 
 // trial counts are interpolated from the same constants that drive the actual session structure
 // (RUNS_PER_SESSION/BLOCKS_PER_RUN/N_TRIAL_TO_BREAK above) so this text can't drift out of sync,
