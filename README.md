@@ -55,6 +55,24 @@ During practice and main trials, participants can press `P` to pause. A pause sc
 minimize paused time and press the spacebar to resume; resuming restarts the current trial from
 the fixation screen. Pausing during confidence does not save a partial response.
 
+**Pause fix (Oct 2026).** Before this, pausing anywhere except the confidence screen was broken in
+two ways, and both showed up as malformed rows in the 400-trial pilot (trials 52, 201, 202):
+
+1. The remaining screens of the paused trial kept running behind the overlay. Resuming before
+   the trial's last screen also cleared the replay flag, so the trial was saved instead of
+   replayed: with no response (`resp` undefined, `rt` NaN), or with a response made without
+   having seen the dots.
+2. The pause forced `jsPsych.finishTrial()` from outside the plugin, which skips the plugin's own
+   cleanup. The interrupted screen's key listener and duration timer survived into the replay,
+   so one later keypress ended two screens at once. The decision key was then saved as the
+   confidence rating (`conf` NaN), and the decision RT was timed from the original,
+   pre-pause screen (trial 52's 94s).
+
+Now every remaining screen is gated on `!pauseRequested`, the flag is consumed only by
+`makePauseableTrial`'s `loop_function`, and the pause handler cancels the plugin's keyboard
+listeners and timeouts before ending the trial. Verified live: pausing during the stimulus,
+the decision or the confidence screen each replays the trial and saves exactly one clean row.
+
 ## What changed
 
 **`js/conditions.js` — counts are now the source of truth.** The old CSV stored `top` plus ratios

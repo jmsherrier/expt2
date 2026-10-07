@@ -42,13 +42,20 @@ document.addEventListener('keydown', function handlePauseKey(event) {
     pauseRequested = true;
     pauseActive = true;
     pauseOverlayEl.style.display = 'flex';
+    // an externally-forced finishTrial() skips the plugin's own cleanup, so its key listener and
+    // duration timer survive into the replay: one later keypress then ended two screens at once
+    // (saving the decision key as the confidence rating -> NaN), and a stale stimulus timer could
+    // end the pause gate early
+    jsPsych.pluginAPI.cancelAllKeyboardResponses();
+    jsPsych.pluginAPI.clearAllTimeouts();
     jsPsych.finishTrial();
     return;
   }
 
+  // resuming only lifts the overlay -- pauseRequested is consumed by makePauseableTrial's
+  // loop_function so the interrupted trial still replays from the start
   if (event.key === ' ' && pauseActive) {
     event.preventDefault();
-    pauseRequested = false;
     pauseActive = false;
     pauseOverlayEl.style.display = 'none';
   }
