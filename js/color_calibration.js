@@ -83,8 +83,9 @@ function saveColorData(subjectId, rows) {
 }
 
 // rebuilds calibration state from this subject's saved _COLOR.csv rows (empty array if the file
-// doesn't exist yet): each row is one confirmed rep, complete once N_COLOR_CALIBRATION_REPS have
-// been recorded -- crash-safe, mirrors how resolveSessionPlan resumes a partially-saved session
+// doesn't exist yet): rows 1..N_COLOR_CALIBRATION_REPS are matching reps, the row after them is the
+// refinement rep, whose gains are final -- crash-safe, mirrors how resolveSessionPlan resumes a
+// partially-saved session
 function deriveColorCalibrationState(colorRows) {
   if (!colorRows.length) {
     return { complete: false, gains: { ...DEFAULT_COLOR_GAINS }, repGains: [], rows: [], trialIndex: 0 };
@@ -93,11 +94,11 @@ function deriveColorCalibrationState(colorRows) {
   const repGains = colorRows.map(r => ({
     orange: Number(r.gain_orange), green: Number(r.gain_green), blue: Number(r.gain_blue), magenta: Number(r.gain_magenta),
   }));
-  const complete = repGains.length >= N_COLOR_CALIBRATION_REPS;
+  const complete = repGains.length > N_COLOR_CALIBRATION_REPS;
 
   return {
     complete,
-    gains: complete ? computeAverageGains(repGains) : { ...DEFAULT_COLOR_GAINS },
+    gains: complete ? repGains[N_COLOR_CALIBRATION_REPS] : { ...DEFAULT_COLOR_GAINS },
     repGains,
     rows: colorRows,
     trialIndex: colorRows.length,
@@ -138,11 +139,12 @@ function buildCalibrationTrialHtml() {
 // one calibration rep: dot positions are generated once (on_load) and never move again this rep --
 // only their rendered color updates as sliders are dragged, since repositioning dots on every
 // 'input' event would both be slow (rejection-sampled placement) and make brightness harder to
-// judge. sliders start at an independent random position per color per rep, so nothing anchors on
-// a previous rep's settings. Confirm calls jsPsych.finishTrial directly (this codebase's plugins
-// already reference the global `jsPsych` instance elsewhere, e.g. getPxPerDeg's jsPsych.data.get())
-// since html-keyboard-response with choices:'NO_KEYS' and no trial_duration otherwise never ends
-function makeCalibrationRepTrial(calibState, subjectId, seed) {
+// judge. matching reps start each slider at an independent random position so nothing anchors on
+// a previous rep's settings; the refinement rep passes startGains instead, so its sliders begin at
+// the averaged gains being refined. Confirm calls jsPsych.finishTrial directly (this codebase's
+// plugins already reference the global `jsPsych` instance elsewhere, e.g. getPxPerDeg's
+// jsPsych.data.get()) since html-keyboard-response with choices:'NO_KEYS' never ends on its own
+function makeCalibrationRepTrial(calibState, subjectId, seed, startGains) {
   return {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: buildCalibrationTrialHtml,
@@ -151,7 +153,8 @@ function makeCalibrationRepTrial(calibState, subjectId, seed) {
     on_load: function () {
       const dotCloud = buildCalibrationDotCloud(CALIBRATION_DOTS_PER_COLOR);
       const gains = {};
-      COLOR_NAMES.forEach(c => { gains[c] = CALIBRATION_FLOOR + Math.random() * (1 - CALIBRATION_FLOOR); });
+      const start = startGains ? startGains() : null;
+      COLOR_NAMES.forEach(c => { gains[c] = start ? start[c] : CALIBRATION_FLOOR + Math.random() * (1 - CALIBRATION_FLOOR); });
 
       const canvas = document.getElementById('calib-canvas');
       const redraw = function () { drawCalibrationStimulus(canvas, dotCloud, gains); };
@@ -196,22 +199,58 @@ function calibrationInstructionsTrial() {
   };
 }
 
-// runs (or resumes) N_COLOR_CALIBRATION_REPS matching reps, each preceded by its own fixation
-// (same Fixation -> Stimulus convention as every other trial in this codebase), then averages the
-// recorded per-rep gains into the final per-color gain and activates it
+// one brief equal-count dot cloud at the current averaged gains: no response, just a look
+function makeCalibrationCheckTrial(calibState) {
+  return {
+    type: jsPsychCanvasKeyboardResponse,
+    canvas_size: getCanvasSize,
+    stimulus: function (canvas) {
+      drawCalibrationStimulus(canvas, buildCalibrationDotCloud(CALIBRATION_DOTS_PER_COLOR), calibState.gains);
+    },
+    choices: 'NO_KEYS',
+    trial_duration: CALIBRATION_CHECK_MS,
+    data: { phase: 'color_calibration_check' },
+  };
+}
+
+// matching reps (resumable), averaged; a few brief equal-count clouds at those gains so the
+// subject can judge whether any color stands out or fades; then one refinement rep starting from
+// the averaged gains, whose values become the final gains. Every stimulus gets its own fixation,
+// same Fixation -> Stimulus convention as the rest of the experiment.
 function buildColorCalibrationTimeline(calibState, subjectId, seed) {
   const timeline = [];
   timeline.push(calibrationInstructionsTrial());
 
+  // a jsPsych loop always runs its body at least once, so the conditional is what lets a resumed
+  // session that already finished the matching reps skip straight to the check
   timeline.push({
-    timeline: [makeFixationTrial(), makeCalibrationRepTrial(calibState, subjectId, seed)],
-    loop_function: function () { return calibState.trialIndex < N_COLOR_CALIBRATION_REPS; },
+    timeline: [{
+      timeline: [makeFixationTrial(), makeCalibrationRepTrial(calibState, subjectId, seed)],
+      loop_function: function () { return calibState.trialIndex < N_COLOR_CALIBRATION_REPS; },
+    }],
+    conditional_function: function () { return calibState.trialIndex < N_COLOR_CALIBRATION_REPS; },
   });
 
   timeline.push({
     type: jsPsychCallFunction,
     func: function () {
-      calibState.gains = computeAverageGains(calibState.repGains);
+      calibState.gains = computeAverageGains(calibState.repGains.slice(0, N_COLOR_CALIBRATION_REPS));
+      setActiveColors(calibState.gains);
+    },
+  });
+
+  timeline.push({ type: jsPsychHtmlKeyboardResponse, stimulus: CALIBRATION_CHECK_TEXT, choices: [' '] });
+  for (let i = 0; i < CALIBRATION_CHECK_STIMULI; i++) {
+    timeline.push(makeFixationTrial(), makeCalibrationCheckTrial(calibState));
+  }
+
+  timeline.push({ type: jsPsychHtmlKeyboardResponse, stimulus: CALIBRATION_REFINE_TEXT, choices: [' '] });
+  timeline.push(makeFixationTrial(), makeCalibrationRepTrial(calibState, subjectId, seed, () => calibState.gains));
+
+  timeline.push({
+    type: jsPsychCallFunction,
+    func: function () {
+      calibState.gains = { ...calibState.repGains[calibState.repGains.length - 1] };
       calibState.complete = true;
       setActiveColors(calibState.gains);
     },

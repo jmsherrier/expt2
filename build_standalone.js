@@ -63,10 +63,6 @@ ${css}
 <body>
   <div id="pre-check-screen"></div>
   <div id="jspsych-target" style="display: none;"></div>
-  <div id="pause-overlay" style="display: none;" role="dialog" aria-live="polite">
-    <p>Try to minimize time paused if possible.</p>
-    <p>Press spacebar to resume.</p>
-  </div>
 </body>
 
 ${inlinedScripts}

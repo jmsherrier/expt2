@@ -31,11 +31,12 @@ const SESSION_SIZE = 160;
 const N_PRACTICE_MIXED_DAY1 = 20;
 const N_PRACTICE_MIXED_REPEAT = 20;
 
-// each session is 1 run x 2 blocks x 80 trials/block = 160, so there's a single break at the
-// midpoint
-const N_TRIAL_TO_BREAK = 80;
+// short blocks so breaks come often enough that nobody needs to pause mid-trial (there is no pause
+// key; a trial interrupted for some other reason shows up as a very long RT and is excluded at
+// analysis). 1 run x 4 blocks x 40 trials = 160, i.e. a break every 40 trials
+const N_TRIAL_TO_BREAK = 40;
 const RUNS_PER_SESSION = 1;
-const BLOCKS_PER_RUN = 2;
+const BLOCKS_PER_RUN = 4;
 const BREAK_DURATION = 30;
 
 // single tunable knob for every visual-angle size in the experiment (aperture, dots, fixation,
@@ -66,12 +67,33 @@ const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_mag
 
 // color-matching calibration: 4 sliders (one per color), each dims that color's base hex toward
 // black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed; the slider itself
-// never exceeds 1.0 (see colors.js). subject repeats the match N_COLOR_CALIBRATION_REPS times,
-// each starting from an independent random slider position, and the final per-color gain is the
-// average across all reps
+// never exceeds 1.0 (see colors.js). Three stages:
+//   1. N_COLOR_CALIBRATION_REPS matching reps, sliders starting at random positions; gains averaged
+//   2. CALIBRATION_CHECK_STIMULI brief equal-count dot clouds (CALIBRATION_CHECK_MS each) drawn at
+//      those averaged gains, so the subject can judge whether any color stands out or fades
+//   3. one refinement rep with the sliders starting at the averaged gains; its values are final
 const CALIBRATION_FLOOR = 0.20;
 const CALIBRATION_DOTS_PER_COLOR = 80;
 const N_COLOR_CALIBRATION_REPS = 2;
+const CALIBRATION_CHECK_STIMULI = 3;
+const CALIBRATION_CHECK_MS = 1500;
+
+const CALIBRATION_CHECK_TEXT = `
+  <div style="font-size:1.4em;">
+    <p>Next you will see ${CALIBRATION_CHECK_STIMULI} brief dot clouds. Each one has the same number of dots in every color.</p>
+    <p>Watch whether any color stands out, or is hard to notice.</p>
+    <p>Press spacebar to begin.</p>
+  </div>
+`;
+
+const CALIBRATION_REFINE_TEXT = `
+  <div style="font-size:1.4em;">
+    <p>Did any color stand out, or seem hard to notice?</p>
+    <p>On the next screen the sliders start where you set them. Adjust any color that stood out or was hard to notice.</p>
+    <p>If all the colors looked equally noticeable, just click Confirm.</p>
+    <p>Press spacebar to continue.</p>
+  </div>
+`;
 
 const COLOR_CSV_HEADER = 'date,time,sid,seed,trial,gain_orange,gain_green,gain_blue,gain_magenta';
 
@@ -130,7 +152,7 @@ function buildColorCalibrationStimulusText(stimulusImgSrc, displayWidthPx) {
 function buildColorCalibrationMappingText() {
   return `
     <div style="font-size:1.4em;">
-      <p>You will see four sliders labeled Red, Green, Blue, and Yellow, each starting at a random position.</p>
+      <p>You will see four sliders labeled ${COLOR_NAMES.map(capitalizeColorName).join(', ')}, each starting at a random position.</p>
       <p>Drag the sliders until no single color looks more salient than the others in the dot cloud.</p>
       <p>Once you're satisfied, click Confirm.</p>
       <p>You will repeat this ${N_COLOR_CALIBRATION_REPS} times.</p>
@@ -139,15 +161,6 @@ function buildColorCalibrationMappingText() {
   `;
 }
 
-// shown once, between the practice block and the main trials
-const PAUSE_WARNING_TEXT = `
-  <div style="font-size:1.4em;">
-    <p>Pausing before choosing an answer or confidence rating resets a trial.</p>
-    <p>Please only do this on purpose if you COMPLETELY missed a trial.</p>
-    <p>Press spacebar to continue.</p>
-  </div>
-`;
-
 // trial counts are interpolated from the same constants that drive the actual session structure
 // (RUNS_PER_SESSION/BLOCKS_PER_RUN/N_TRIAL_TO_BREAK above) so this text can't drift out of sync,
 // same reasoning as buildMainInstructionsPages in main_instructions.js
@@ -155,7 +168,7 @@ function buildTransitionText() {
   return `
     <div style="font-size:1.4em;">
       <p>Good job! You have completed the practice trials.</p>
-      <p>You will now perform ${RUNS_PER_SESSION} runs of ${BLOCKS_PER_RUN} blocks, with each block containing ${N_TRIAL_TO_BREAK} trials.</p>
+      <p>You will now complete ${RUNS_PER_SESSION * BLOCKS_PER_RUN} blocks of ${N_TRIAL_TO_BREAK} trials, with a short break after each block.</p>
       <p>No feedback will be given during the experimental trials.</p>
       <p>Make sure to try your best!</p>
       <p>Press any key to continue.</p>

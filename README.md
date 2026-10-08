@@ -21,8 +21,8 @@ Eight conditions, specified in dot counts:
 reordering `CONDITIONS_CSV` in `js/conditions.js` renumbers saved data. Don't reorder after
 collection starts.
 
-**Trial budget:** 20 reps × 8 conditions = 160 trials, run as one session of 1 run × 2 blocks ×
-80 trials (a single break at the midpoint). Each condition's 20 reps split evenly across
+**Trial budget:** 20 reps × 8 conditions = 160 trials, run as one session of 4 blocks × 40 trials
+(a break after every block). Each condition's 20 reps split evenly across
 `STIMULUS_DURATIONS` (10 at 150ms, 10 at 500ms), so every condition runs at both durations. To
 change it, edit `N_REPS`, `N_SESSIONS`, `SESSION_SIZE` in `js/config.js` and keep
 
@@ -44,39 +44,31 @@ mixed w/o feedback) to keep practice proportionate to the smaller 160-trial main
 
 `style.css`, `img/card.png`, and `js/{colors,rng,permutations,stimulus,color_calibration,main}.js`
 retain the original behavior. The HJKL color mapping, virtual chinrest and degree-based sizing,
-2-rep color-matching calibration, save-every-trial/retry/resume machinery, and all previous CSV
-fields remain in place.
+save-every-trial/retry/resume machinery, and all previous CSV fields remain in place. The color
+calibration has since been extended (see "Color calibration: check and refine" below).
 
 The output CSV retains the previous fields but adds `duration` immediately after `trial`, so it is
 not byte-for-byte identical to the previous experiment's header. `top` is `counts[0]` and
 `ratio_1..3` are `counts[i] / top`.
 
-During practice and main trials, participants can press `P` to pause. A pause screen asks them to
-minimize paused time and press the spacebar to resume; resuming restarts the current trial from
-the fixation screen. Pausing during confidence does not save a partial response. A screen between
-the practice block and the main trials, right after the "Good job!" screen (`PAUSE_WARNING_TEXT` in `js/config.js`) tells
-participants that pausing resets a trial and should only be used if they completely missed one.
-The break screen also asks them to take a slightly longer break if they feel lazy or distracted;
-the "Press spacebar to continue to the next block" screen after the 30 s countdown waits
-indefinitely, so a longer break needs no extra code.
+**No pausing.** There used to be a `P`-to-pause key. Per Doby it was removed: people should rest
+during the breaks, not mid-block, and the trial right after a pause was hard. Instead, blocks are
+short (40 trials, `N_TRIAL_TO_BREAK`), so breaks come often. A trial someone had to step away
+from shows up as a very long RT and is excluded at analysis. The pause feature was also behind the
+three malformed rows (trials 52, 201, 202) in the 400-trial pilot.
 
-**Pause fix (Oct 2026).** Before this, pausing anywhere except the confidence screen was broken in
-two ways, and both showed up as malformed rows in the 400-trial pilot (trials 52, 201, 202):
+The break screen asks participants to take a slightly longer break if they feel lazy or
+distracted; the "Press spacebar to continue to the next block" screen after the 30 s countdown
+waits indefinitely, so a longer break needs no extra code.
 
-1. The remaining screens of the paused trial kept running behind the overlay. Resuming before
-   the trial's last screen also cleared the replay flag, so the trial was saved instead of
-   replayed: with no response (`resp` undefined, `rt` NaN), or with a response made without
-   having seen the dots.
-2. The pause forced `jsPsych.finishTrial()` from outside the plugin, which skips the plugin's own
-   cleanup. The interrupted screen's key listener and duration timer survived into the replay,
-   so one later keypress ended two screens at once. The decision key was then saved as the
-   confidence rating (`conf` NaN), and the decision RT was timed from the original,
-   pre-pause screen (trial 52's 94s).
-
-Now every remaining screen is gated on `!pauseRequested`, the flag is consumed only by
-`makePauseableTrial`'s `loop_function`, and the pause handler cancels the plugin's keyboard
-listeners and timeouts before ending the trial. Verified live: pausing during the stimulus,
-the decision or the confidence screen each replays the trial and saves exactly one clean row.
+**Color calibration: check and refine.** After the 2 slider-matching reps (sliders start at random
+positions, gains averaged), participants see 3 brief dot clouds (1.5 s each, same number of dots
+per color) drawn at those averaged gains, and judge whether any color stood out or was hard to
+notice. They then do one refinement rep with the sliders starting at the averaged gains; its
+values are the final gains used for the session. Constants: `N_COLOR_CALIBRATION_REPS`,
+`CALIBRATION_CHECK_STIMULI`, `CALIBRATION_CHECK_MS` in `js/config.js`. In the `_COLOR.csv`, rows 1-2
+are the matching reps and row 3 is the refinement. The main CSV's `gain_*` columns hold the final
+(refined) gains.
 
 ## What changed
 
@@ -201,7 +193,7 @@ Re-run the build script any time the source `js/*.js`/`style.css`/`img/card.png`
 
 ```bash
 node build_standalone.js                              # canonical build (js/config.js as-is)
-node build_standalone.js . '{"N_REPS":50,"SESSION_SIZE":400,"N_TRIAL_TO_BREAK":80,"BLOCKS_PER_RUN":5,"RUNS_PER_SESSION":1}' index-standalone-joseph.html
+node build_standalone.js . '{"N_REPS":50,"SESSION_SIZE":400,"N_TRIAL_TO_BREAK":40,"BLOCKS_PER_RUN":10,"RUNS_PER_SESSION":1}' index-standalone-joseph.html
 ```
 
 The second argument is an optional JSON object of `js/config.js` constants to override in that

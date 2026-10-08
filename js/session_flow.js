@@ -166,7 +166,7 @@ function buildPracticeTimeline(trials, feedback) {
       makeConfidenceTrial(result),
     ];
     if (feedback) trialTimeline.push(makeFeedbackTrial(trial, result));
-    nodes.push(makePauseableTrial(trialTimeline));
+    nodes.push(...trialTimeline);
   });
   return nodes;
 }
@@ -184,7 +184,7 @@ function buildMainTimeline(trials, subjectId, seed, session, sessionData, startI
     }
 
     const result = {};
-    nodes.push(makePauseableTrial([
+    nodes.push(
       makeFixationTrial(),
       makeStimulusTrial(trial),
       makeDecisionTrial(trial, result),
@@ -192,7 +192,7 @@ function buildMainTimeline(trials, subjectId, seed, session, sessionData, startI
         sessionData.push(rowToCsvLine(buildTrialInfo(trial, result, subjectId, seed, trialIndex, calibState.gains)));
         saveSessionData(subjectId, session, sessionData);
       }),
-    ]));
+    );
   });
   return nodes;
 }
@@ -299,10 +299,7 @@ function runSession(subjectId, sessionNumber, resumeFromTrial, isFirstSession, c
 
   timeline.push(mainInstructionsTrial(isFirstSession));
   practiceBlocks.forEach(block => timeline.push(...buildPracticeTimeline(block.trials, block.feedback)));
-  if (practiceBlocks.length) {
-    timeline.push(transitionMessageTrial());
-    timeline.push({ type: jsPsychHtmlKeyboardResponse, stimulus: PAUSE_WARNING_TEXT, choices: [' '] });
-  }
+  if (practiceBlocks.length) timeline.push(transitionMessageTrial());
   timeline.push(...buildMainTimeline(trialsToRun, subjectId, seed, sessionNumber, sessionData, resumeFromTrial, calibState));
   timeline.push(...sessionCompleteTimeline(subjectId, sessionNumber, sessionData));
   timeline.push({ type: jsPsychFullscreen, fullscreen_mode: false });

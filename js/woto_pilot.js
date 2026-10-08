@@ -13,12 +13,6 @@ const SPREAD_CONDITIONS = {
 const WOTO_DURATIONS = { short: 300, long: 600 };
 const WOTO_REPS_PER_CELL = 25; // 2 spreads x 2 durations x 25 = 100 trials, ~10-12 min
 
-// makeConfidenceTrial/makePauseableTrial (expt_util.js) read these -- pause isn't wired up here
-// (no P-key handler, single short block), but the names must exist or confidence recording throws
-const pauseRequested = false;
-const pauseActive = false;
-function setPauseHintVisible() {}
-
 function buildWotoTrials() {
   const rng = mulberry32(Date.now() >>> 0);
   const trials = [];

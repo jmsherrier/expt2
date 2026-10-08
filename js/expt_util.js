@@ -261,42 +261,6 @@ function drawFeedback(canvas, acc, correctColor) {
   }
 }
 
-// Ending the active jsPsych trial lets the timeline replay it from the beginning after a pause.
-// The wrapper is used only around response/stimulus trials, so a replay cannot save duplicate data.
-// Pressing P ends the current screen early; every remaining screen of this trial is then skipped
-// (each is gated on !pauseRequested) so nothing runs hidden behind the pause overlay, and
-// loop_function replays the whole trial from the pause gate. pauseRequested stays set until
-// loop_function consumes it -- resuming with spacebar only clears pauseActive -- so a pause can't
-// be lost by resuming before the trial's last screen. Without this, a pause during fixation,
-// stimulus or decision let the rest of the trial run under the overlay and saved it: either with
-// no response, or with a response made after resuming without ever having seen the dots.
-function makePauseableTrial(trials) {
-  const skipIfPaused = t => ({ timeline: [t], conditional_function: () => !pauseRequested });
-  return {
-    timeline: [
-      {
-        timeline: [{
-          type: jsPsychHtmlKeyboardResponse,
-          stimulus: '',
-          choices: [' '],
-          data: { phase: 'pause_gate' },
-        }],
-        conditional_function: function () { return pauseActive; },
-      },
-      ...(Array.isArray(trials) ? trials : [trials]).map(skipIfPaused),
-    ],
-    on_timeline_start: function () {
-      setPauseHintVisible(true);
-    },
-    on_timeline_finish: function () { setPauseHintVisible(false); },
-    loop_function: function () {
-      const replay = pauseRequested;
-      pauseRequested = false;
-      return replay;
-    },
-  };
-}
-
 function makeFixationTrial() {
   return {
     type: jsPsychCanvasKeyboardResponse,
@@ -338,7 +302,6 @@ function makeDecisionTrial(trial, result) {
     choices: validKeys,
     data: { phase: 'decision' },
     on_finish: function (data) {
-      if (pauseRequested) return;
       const respColor = Object.keys(COLOR_KEYS).find(c => COLOR_KEYS[c] === data.response);
       result.resp = respColor;
       result.acc = respColor === trial.correct_color ? 1 : 0;
@@ -355,7 +318,6 @@ function makeConfidenceTrial(result, onDone) {
     choices: CONFIDENCE_KEYS,
     data: { phase: 'confidence' },
     on_finish: function (data) {
-      if (pauseRequested) return;
       result.conf = Number(data.response);
       result.c_rt = data.rt / 1000;
       if (onDone) onDone();

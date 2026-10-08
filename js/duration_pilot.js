@@ -3,12 +3,6 @@
 // 4-choice condition (README's DIFFICULTY_TIERS "medium" tier) while duration varies. Not part
 // of the main experiment/CSV schema -- run duration-pilot.html directly. Exists to inform
 // STIMULUS_DURATIONS in config.js, which is a placeholder pending exactly this (see README).
-// makeConfidenceTrial/makePauseableTrial (expt_util.js) read these -- pause isn't wired up here
-// (no P-key handler, single short block), but the names must exist or confidence recording throws
-const pauseRequested = false;
-const pauseActive = false;
-function setPauseHintVisible() {}
-
 const PILOT_COUNTS = [100, 80, 50, 50];
 const PILOT_DURATIONS = [50, 100, 150, 250, 400, 600]; // ms
 const PILOT_REPS_PER_DURATION = 15; // 90 trials total, ~10 min after chinrest calibration

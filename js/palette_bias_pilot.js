@@ -37,12 +37,6 @@ const CONDITIONS_4CHOICE = [
 const STIMULUS_DURATION = 500; // the study's baseline/no-noise duration, so only palette varies
 const REPS_PER_CELL = 6; // 5 conditions x 4 target colors x 6 reps = 120 trials/palette (240 total)
 
-// makeConfidenceTrial/makePauseableTrial (expt_util.js) read these -- pause isn't wired up here
-// (no P-key handler, single short block), but the names must exist or confidence recording throws
-const pauseRequested = false;
-const pauseActive = false;
-function setPauseHintVisible() {}
-
 // each color is forced to be the correct answer exactly REPS_PER_CELL times per condition per
 // palette (colors[0] always the balanced target); the other three colors fill the remaining
 // count-rank positions in random order, so no color is systematically stuck as e.g. the runner-up
