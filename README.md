@@ -1,4 +1,32 @@
-# WOTO testing experiment
+# WOTO: multi-alternative perceptual choice experiment
+
+![jsPsych](https://img.shields.io/badge/jsPsych-7.3-4B6CB7?style=flat-square)
+![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![PHP](https://img.shields.io/badge/PHP-optional%20save-777BB4?style=flat-square&logo=php&logoColor=white)
+![Status](https://img.shields.io/badge/status-piloting-orange?style=flat-square)
+
+A browser-based psychophysics experiment, built with jsPsych, testing the **wrong-option
+trade-off (WOTO)**: whether choosing among several options depends not only on the gap between
+the best option and the runner-up, but on how the remaining distractors are spread. On each
+trial a brief cloud of colored dots appears, the participant reports the most numerous color
+with one of four keys, then rates their confidence.
+
+- **Controlled stimuli.** A virtual chinrest sizes everything in degrees of visual angle, and an
+  equiluminant four-color palette (equal CAM16 lightness and colorfulness) is calibrated per
+  participant by slider matching followed by a check-and-refine step.
+- **Balanced, reproducible design.** 8 dot-count conditions × 2 stimulus durations
+  (150 / 500 ms), with seeded trial lists balanced per condition, correct color and duration.
+  A Node script (`verify_durations.js`) checks those guarantees per subject.
+- **Runs anywhere.** On a PHP host every trial is saved as it happens and sessions resume after
+  a crash; with no server, or as a single self-contained HTML file built by
+  `build_standalone.js`, it downloads the data at the end.
+- **Pilots.** Standalone duration, palette-bias and WOTO × duration pilots informed the main
+  design.
+
+The rest of this README is the lab notebook: design parameters and what changed from the
+previous MAFC (multi-alternative forced choice) experiment it was ported from.
+
+---
 
 Standalone port of the previous MAFC main experiment, rebuilt around new condition set.
 
