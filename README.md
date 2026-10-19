@@ -222,13 +222,16 @@ Re-run the build script any time the source `js/*.js`/`style.css`/`img/card.png`
 ```bash
 node build_standalone.js                              # canonical build (js/config.js as-is)
 node build_standalone.js . '{"N_REPS":50,"SESSION_SIZE":400,"N_TRIAL_TO_BREAK":40,"BLOCKS_PER_RUN":10,"RUNS_PER_SESSION":1}' index-standalone-joseph.html
+node build_standalone.js . '{"N_REPS":75,"SESSION_SIZE":600,"N_TRIAL_TO_BREAK":40,"BLOCKS_PER_RUN":15,"RUNS_PER_SESSION":1}' index-standalone-600.html
 ```
 
 The second argument is an optional JSON object of `js/config.js` constants to override in that
-one build only -- `js/config.js` on disk is never touched. Two builds currently exist:
+one build only -- `js/config.js` on disk is never touched. Three builds currently exist:
 `index-standalone.html` (the canonical 20-reps/condition, 160-trial config, for Doby) and
 `index-standalone-joseph.html` (50 reps/condition, 400 trials, one longer run for a fuller
-single-subject sample). Both run the same 8 conditions x `STIMULUS_DURATIONS` (150/500ms)
+single-subject sample), and `index-standalone-600.html` (75 reps/condition, 600 trials in 15
+blocks of 40, for general participants; 75 is odd, so each condition splits 37/38 between the two
+durations, 296/304 overall). All run the same 8 conditions x `STIMULUS_DURATIONS` (150/500ms)
 design, just at different sample sizes.
 
 ## Duration pilot
