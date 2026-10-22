@@ -14,7 +14,7 @@ const outFile = process.argv[4] || 'index-standalone.html';
 const jsFiles = [
   'js/config.js', 'js/colors.js', 'js/conditions.js', 'js/rng.js', 'js/permutations.js',
   'js/triallist.js', 'js/stimulus.js', 'js/expt_util.js', 'js/color_calibration.js',
-  'js/main_instructions.js', 'js/session_flow.js', 'js/main.js',
+  'js/main_instructions.js', 'js/consent.js', 'js/session_flow.js', 'js/main.js',
 ]; // same order as index.html's <script> tags -- later files depend on earlier ones
 
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');

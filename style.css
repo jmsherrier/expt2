@@ -59,3 +59,21 @@ html, body {
 #jspsych-canvas-stimulus {
   display: block;
 }
+
+/* IRB consent (js/consent.js): its own scroll area, since body is overflow:hidden */
+#consent-screen {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  z-index: 10;
+  background-color: #3B3B3B;
+}
+.consent-doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  line-height: 1.5;
+  font-size: 18px;
+}
+.consent-doc label { display: block; margin: 10px 0; }
+.consent-doc button { font-size: 1.05em; padding: 8px 20px; margin-right: 12px; }

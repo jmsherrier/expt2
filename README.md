@@ -222,7 +222,7 @@ Re-run the build script any time the source `js/*.js`/`style.css`/`img/card.png`
 ```bash
 node build_standalone.js                              # canonical build (js/config.js as-is)
 node build_standalone.js . '{"N_REPS":50,"SESSION_SIZE":400,"N_TRIAL_TO_BREAK":40,"BLOCKS_PER_RUN":10,"RUNS_PER_SESSION":1}' index-standalone-joseph.html
-node build_standalone.js . '{"N_REPS":76,"SESSION_SIZE":608,"N_TRIAL_TO_BREAK":38,"BLOCKS_PER_RUN":16,"RUNS_PER_SESSION":1}' index-standalone-608.html
+node build_standalone.js . '{"N_REPS":76,"SESSION_SIZE":608,"N_TRIAL_TO_BREAK":38,"BLOCKS_PER_RUN":16,"RUNS_PER_SESSION":1,"SHOW_CONSENT":true}' index-standalone-608.html
 ```
 
 The second argument is an optional JSON object of `js/config.js` constants to override in that
@@ -231,7 +231,10 @@ one build only -- `js/config.js` on disk is never touched. Three builds currentl
 `index-standalone-joseph.html` (50 reps/condition, 400 trials, one longer run for a fuller
 single-subject sample), and `index-standalone-608.html` (76 reps/condition, 608 trials in 16
 blocks of 38, for general participants; 76 rather than 75 so every condition x duration cell gets
-exactly 38). All run the same 8 conditions x `STIMULUS_DURATIONS` (150/500ms)
+exactly 38). Only the 608 build sets `SHOW_CONSENT`, which opens with the IRB2026-66 online
+consent form (`js/consent.js`, verbatim from Consent_Behavioral_2026.pdf); the participant's
+store/share choice lands in the main CSV's last column, `share_data` (yes/no, blank in builds without
+consent). "I do not consent" ends the page there. All run the same 8 conditions x `STIMULUS_DURATIONS` (150/500ms)
 design, just at different sample sizes.
 
 ## Duration pilot

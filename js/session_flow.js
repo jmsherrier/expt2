@@ -5,7 +5,7 @@ function rowToCsvLine(row) {
     row.session, row.trial, row.duration,
     row.n_choice, row.condition_id, row.top, row.ratio_1, row.ratio_2, row.ratio_3,
     `[${row.colors.join(',')}]`, `[${row.counts.join(',')}]`,
-    row.stim, row.resp, row.acc, row.rt, row.conf, row.c_rt,
+    row.stim, row.resp, row.acc, row.rt, row.conf, row.c_rt, row.share_data,
   ];
   return fields.map(csvField).join(',');
 }
@@ -28,6 +28,7 @@ function buildTrialInfo(trial, result, subjectId, seed, trialIndex, gains) {
     colors: trial.colors.map(c => COLOR_CODES[c]),
     counts: trial.counts,
     stim: COLOR_CODES[trial.correct_color],
+    share_data: SHARE_CONSENT,
     resp: COLOR_CODES[result.resp],
     acc: result.acc, rt: result.rt, conf: result.conf, c_rt: result.c_rt,
   };

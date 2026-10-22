@@ -63,7 +63,10 @@ const STIMULUS_DURATIONS = [150, 500];
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.
-const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_magenta,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt';
+const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_magenta,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt,share_data';
+
+// IRB consent screen (js/consent.js) before the pre-check -- on only in the general-participant build
+const SHOW_CONSENT = false;
 
 // color-matching calibration: 4 sliders (one per color), each dims that color's base hex toward
 // black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed; the slider itself

@@ -27,10 +27,13 @@ const preCheckEl = document.getElementById('pre-check-screen');
 // very first screen of the whole page load -- spacebar starts the session directly, no label to
 // type or confirm. subjectId is now just an internal run identifier (seeds the trial RNG, tags
 // the CSV's sid column) rather than something a person enters
-preCheckEl.innerHTML = PRE_CHECK_TEXT;
-document.addEventListener('keydown', function dismissPreCheck(event) {
-  if (event.key !== ' ') return;
-  document.removeEventListener('keydown', dismissPreCheck);
-  preCheckEl.style.display = 'none';
-  startExperiment(String(Date.now()));
-});
+function showPreCheck() {
+  preCheckEl.innerHTML = PRE_CHECK_TEXT;
+  document.addEventListener('keydown', function dismissPreCheck(event) {
+    if (event.key !== ' ') return;
+    document.removeEventListener('keydown', dismissPreCheck);
+    preCheckEl.style.display = 'none';
+    startExperiment(String(Date.now()));
+  });
+}
+if (SHOW_CONSENT) showConsent(showPreCheck); else showPreCheck();
