@@ -1,3 +1,6 @@
 
 # participant data (file names are participant names)
 data/
+
+# server data written by save.php when testing locally
+woto_data/

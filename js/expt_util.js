@@ -164,12 +164,12 @@ function drawStimulus(canvas, trial) {
 // returns color labels (not baked-in hex) so a caller can redraw the same fixed positions at
 // different gains -- e.g. color_calibration.js's sliders redraw live while dragging without
 // re-running rejection sampling on every 'input' event
-function buildCalibrationDotCloud(nDotsPerColor) {
-  const nTotal = nDotsPerColor * COLOR_NAMES.length;
+function buildCalibrationDotCloud(nDotsPerColor, colors = COLOR_NAMES) {
+  const nTotal = nDotsPerColor * colors.length;
   const positions = generateDotPositions(nTotal, APERTURE_RADIUS_DEG, DOT_RADIUS_DEG);
 
   const colorLabels = [];
-  COLOR_NAMES.forEach(color => { for (let j = 0; j < nDotsPerColor; j++) colorLabels.push(color); });
+  colors.forEach(color => { for (let j = 0; j < nDotsPerColor; j++) colorLabels.push(color); });
   shuffle(colorLabels, Math.random);
 
   return positions.map((pos, i) => ({ pos, color: colorLabels[i] }));

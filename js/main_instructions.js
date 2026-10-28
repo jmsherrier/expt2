@@ -155,6 +155,7 @@ function buildMainInstructionsPages(isFirstSession) {
       <p>2 = low confidence</p>
       <p>3 = high confidence</p>
       <p>4 = very high confidence</p>
+      <p>There are no right or wrong confidence ratings. Please try to use the whole scale, from 1 to 4, depending on how sure you feel on each trial.</p>
     </div>`,
     `<div style="font-size:1.4em;">
       <p>If you're unsure about the task, please go back and review.</p>

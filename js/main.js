@@ -24,16 +24,40 @@ document.documentElement.style.setProperty('--text-scale', VISUAL_ANGLE_SCALE);
 
 const preCheckEl = document.getElementById('pre-check-screen');
 
-// very first screen of the whole page load -- spacebar starts the session directly, no label to
-// type or confirm. subjectId is now just an internal run identifier (seeds the trial RNG, tags
-// the CSV's sid column) rather than something a person enters
-function showPreCheck() {
+// Georgia Tech username, after consent: it names the data file (<DATA_PREFIX>_<username>.csv),
+// fills the CSV's sid column and seeds the trial order, and re-entering it after a crash resumes
+// the saved session. Accepts a pasted address by dropping anything from '@' on
+function showUsernameScreen(onDone) {
+  preCheckEl.innerHTML = `
+    <form id="username-form" style="font-size:1.2em; text-align:center;">
+      ${USERNAME_PROMPT_TEXT}
+      <p><input id="username-input" type="text" autocomplete="off" spellcheck="false" style="font-size:1.1em; padding:6px 10px; width:240px;"></p>
+      <p id="username-error" style="color:#ffb4a8; min-height:1.4em;"></p>
+      <p><button type="submit" style="font-size:1.1em; padding:8px 24px;">Continue</button></p>
+    </form>`;
+  const input = document.getElementById('username-input');
+  input.focus();
+  document.getElementById('username-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const username = input.value.trim().toLowerCase().replace(/@.*$/, '');
+    if (!/^[a-z][a-z0-9]{1,29}$/.test(username)) {
+      document.getElementById('username-error').textContent = 'Please enter a username like gburdell3: letters and numbers only, no spaces.';
+      return;
+    }
+    onDone(username);
+  });
+}
+
+// last screen before the experiment starts -- spacebar starts the session
+function showPreCheck(username) {
   preCheckEl.innerHTML = PRE_CHECK_TEXT;
   document.addEventListener('keydown', function dismissPreCheck(event) {
     if (event.key !== ' ') return;
     document.removeEventListener('keydown', dismissPreCheck);
     preCheckEl.style.display = 'none';
-    startExperiment(String(Date.now()));
+    startExperiment(username);
   });
 }
-if (SHOW_CONSENT) showConsent(showPreCheck); else showPreCheck();
+
+const askUsername = () => showUsernameScreen(showPreCheck);
+if (SHOW_CONSENT) showConsent(askUsername); else askUsername();

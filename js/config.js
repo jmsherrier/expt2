@@ -13,14 +13,14 @@ function seedForTrialLabel(label) {
   return hash >>> 0;
 }
 
-// trial-count design: 20 reps x 8 conditions = 160 trials, run as a SINGLE session. Each
-// condition's 20 reps split evenly across STIMULUS_DURATIONS (10 at each duration), via the same
+// trial-count design: 90 reps x 8 conditions = 720 trials, run as a SINGLE session. Each
+// condition's 90 reps split evenly across STIMULUS_DURATIONS (45 at each duration), via the same
 // assignBalancedDurations machinery as before -- see triallist.js. To change the budget, keep
 //   N_REPS * (number of conditions) === N_SESSIONS * SESSION_SIZE, and keep SESSION_SIZE
 //   divisible by N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION.
-const N_REPS = 20;
+const N_REPS = 90;
 const N_SESSIONS = 1;
-const SESSION_SIZE = 160;
+const SESSION_SIZE = 720;
 
 // practice block sizes. day 1 (first-ever session): a single 20-trial easy+medium mixed block
 // w/ feedback. every later session: 20 easy+medium mixed w/ feedback, 20 more w/o feedback = 40
@@ -33,10 +33,10 @@ const N_PRACTICE_MIXED_REPEAT = 20;
 
 // short blocks so breaks come often enough that nobody needs to pause mid-trial (there is no pause
 // key; a trial interrupted for some other reason shows up as a very long RT and is excluded at
-// analysis). 1 run x 4 blocks x 40 trials = 160, i.e. a break every 40 trials
+// analysis). 1 run x 18 blocks x 40 trials = 720, i.e. a break every 40 trials
 const N_TRIAL_TO_BREAK = 40;
 const RUNS_PER_SESSION = 1;
-const BLOCKS_PER_RUN = 4;
+const BLOCKS_PER_RUN = 18;
 const BREAK_DURATION = 30;
 
 // single tunable knob for every visual-angle size in the experiment (aperture, dots, fixation,
@@ -59,25 +59,42 @@ const CONFIDENCE_KEYS = ['1', '2', '3', '4'];
 
 // stimulus durations: short/long, chosen from the duration pilot (see README) -- each of the 8
 // conditions runs at both.
-const STIMULUS_DURATIONS = [150, 500];
+const STIMULUS_DURATIONS = [100, 500];
 
 // `top` is counts[0] and ratio_1..3 are counts[i]/top, derived in conditions.js from the literal
 // counts -- ratio_3 is always blank on 3-choice trials, as before.
 const CSV_HEADER = 'date,time,sid,seed,gain_orange,gain_green,gain_blue,gain_magenta,session,trial,duration,n_choice,condition_id,top,ratio_1,ratio_2,ratio_3,colors,counts,stim,resp,acc,rt,conf,c_rt,share_data';
 
-// IRB consent screen (js/consent.js) before the pre-check -- on only in the general-participant build
-const SHOW_CONSENT = false;
+// IRB consent screen (js/consent.js) before the username screen
+const SHOW_CONSENT = true;
 
-// color-matching calibration: 4 sliders (one per color), each dims that color's base hex toward
-// black -- gain 1.0 is unadjusted, CALIBRATION_FLOOR is the dimmest allowed; the slider itself
-// never exceeds 1.0 (see colors.js). Three stages:
-//   1. N_COLOR_CALIBRATION_REPS matching reps, sliders starting at random positions; gains averaged
-//   2. CALIBRATION_CHECK_STIMULI brief equal-count dot clouds (CALIBRATION_CHECK_MS each) drawn at
-//      those averaged gains, so the subject can judge whether any color stands out or fades
-//   3. one refinement rep with the sliders starting at the averaged gains; its values are final
-const CALIBRATION_FLOOR = 0.20;
+// server data files (save.php/save_color.php/progress.php, folder woto_data/) are named
+// <DATA_PREFIX>_<gatech username>.csv -- the flow-test build uses 'woto_test' so its runs can never
+// collide with (or be resumed as) a real participant's file. The PHP endpoints whitelist both.
+const DATA_PREFIX = 'woto';
+
+// color-matching calibration: each gain dims that color's base hex toward black (1.0 = unadjusted).
+// Green is the fixed reference at GREEN_FIXED_GAIN and is never adjustable; the other three colors'
+// sliders run GREEN_FIXED_GAIN +/- CALIBRATION_RANGE, so the slider midpoint is green's own level.
+//   Step 1: one pairwise screen per other color (green + that color only, its slider starting at a
+//           random position) -- adjusts each color relative to green
+//   Step 2: all four colors together, sliders starting at the step-1 values (green locked); then
+//           CALIBRATION_CHECK_STIMULI brief equal-count clouds (CALIBRATION_CHECK_MS each); then one
+//           refinement screen starting where they left off. The refinement's values are final.
+// 0.55: mid-range, so the other colors have room above and below, and the whole display can't end
+// up dim (P1 in the first pilots set every color ~0.4 and had the lowest accuracy). Slightly below
+// the green the first pilots matched to (0.60, 0.70), since green was over-picked as a wrong
+// option by all three -- but because the others are matched TO green, this mostly sets overall
+// brightness; it can't by itself remove a green (or J-key) bias.
+const GREEN_FIXED_GAIN = 0.55;
+const CALIBRATION_RANGE = 0.30;
+const CALIBRATION_MIN = Math.round((GREEN_FIXED_GAIN - CALIBRATION_RANGE) * 100) / 100;
+const CALIBRATION_MAX = Math.round((GREEN_FIXED_GAIN + CALIBRATION_RANGE) * 100) / 100;
 const CALIBRATION_DOTS_PER_COLOR = 80;
-const N_COLOR_CALIBRATION_REPS = 2;
+// the colors adjusted against green in step 1, in screen order
+const CALIBRATION_PAIR_COLORS = ['orange', 'blue', 'magenta'];
+// saved calibration rows: one per pairwise screen, then the all-colors screen, then the refinement
+const N_CALIBRATION_SCREENS = CALIBRATION_PAIR_COLORS.length + 2;
 const CALIBRATION_CHECK_STIMULI = 3;
 const CALIBRATION_CHECK_MS = 1500;
 
@@ -92,7 +109,7 @@ const CALIBRATION_CHECK_TEXT = `
 const CALIBRATION_REFINE_TEXT = `
   <div style="font-size:1.4em;">
     <p>Did any color stand out, or seem hard to notice?</p>
-    <p>On the next screen the sliders start where you set them. Adjust any color that stood out or was hard to notice.</p>
+    <p>On the next screen the sliders start where you set them. Adjust any color that stood out or was hard to notice. Green stays fixed.</p>
     <p>If all the colors looked equally noticeable, just click Confirm.</p>
     <p>Press spacebar to continue.</p>
   </div>
@@ -155,10 +172,9 @@ function buildColorCalibrationStimulusText(stimulusImgSrc, displayWidthPx) {
 function buildColorCalibrationMappingText() {
   return `
     <div style="font-size:1.4em;">
-      <p>You will see four sliders labeled ${COLOR_NAMES.map(capitalizeColorName).join(', ')}, each starting at a random position.</p>
-      <p>Drag the sliders until no single color looks more salient than the others in the dot cloud.</p>
-      <p>Once you're satisfied, click Confirm.</p>
-      <p>You will repeat this ${N_COLOR_CALIBRATION_REPS} times.</p>
+      <p>Green is the reference color and stays fixed.</p>
+      <p>First you will see Green together with one other color. Drag that color's slider until neither color looks more noticeable than the other, then click Confirm. You will do this for ${CALIBRATION_PAIR_COLORS.map(capitalizeColorName).join(', ').replace(/, ([^,]*)$/, ', and $1')}.</p>
+      <p>Then you will see all four colors together and can fine-tune them.</p>
       <p>Use the Right Arrow key, or click Next, to begin.</p>
     </div>
   `;
@@ -173,6 +189,7 @@ function buildTransitionText() {
       <p>Good job! You have completed the practice trials.</p>
       <p>You will now complete ${RUNS_PER_SESSION * BLOCKS_PER_RUN} blocks of ${N_TRIAL_TO_BREAK} trials, with a short break after each block.</p>
       <p>No feedback will be given during the experimental trials.</p>
+      <p>Remember to use the whole confidence scale, from 1 to 4.</p>
       <p>Make sure to try your best!</p>
       <p>Press any key to continue.</p>
     </div>
@@ -185,18 +202,23 @@ function buildTransitionText() {
 const SESSION_COMPLETE_TEXT = `
   <div style="font-size:1.4em;">
     <p>You have completed the experiment!</p>
-    <p>Make sure to save all the files before closing this window.</p>
-  </div>
-`;
-const SAVE_FAILED_TEXT = `
-  <div style="font-size:1.4em;">
-    <p>There was an error saving your data.</p>
-    <p>Please try again later.</p>
+    <p>Your data has been saved. Thank you for participating. You can now close this window.</p>
   </div>
 `;
 
-// shown above the "Save Data to Computer" button on the local-backup screen at the end of every
-// session -- placeholder wording
-const LOCAL_SAVE_PROMPT_TEXT = 'As a backup, please also save a copy of your data to your own computer.';
+// only reached when the server save failed or no server was found (e.g. the file opened locally):
+// the data would otherwise be lost, so the participant downloads it and sends it in
+const LOCAL_SAVE_PROMPT_TEXT = `
+  <div style="font-size:1.4em;">
+    <p>You have completed the experiment, but your data could not be saved to the server.</p>
+    <p>Please click the button below to download your data file, and email it to the researcher.</p>
+  </div>
+`;
+
+// username screen (main.js), shown after consent -- the username names the data file
+const USERNAME_PROMPT_TEXT = `
+  <p>Please enter your Georgia Tech username (for example, gburdell3).</p>
+  <p>Enter only the username, without @gatech.edu.</p>
+`;
 
 const STUDY_COMPLETE_TEXT = '<p>Hurray! You have completed this study. Thank you for participating!</p>';

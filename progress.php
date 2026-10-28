@@ -1,38 +1,37 @@
 <?php
-// validated progress-check endpoint: reports how many data rows already exist for each of a
-// subject's session files (to resume mid-session, start the next fresh session, or report the
-// study complete), plus the raw data lines themselves so a resumed session can carry them forward
-// instead of the client's next save overwriting the file with only the post-resume trials, plus
-// this subject's color-calibration rows, if any, so the client can rebuild calibration state
-// (deriveColorCalibrationState in color_calibration.js) without its own CSV parser.
+// validated progress-check endpoint: reports how many data rows already exist in this participant's
+// file (to resume mid-session, or report the study complete), plus the raw data lines themselves so
+// a resumed session can carry them forward instead of the client's next save overwriting the file
+// with only the post-resume trials, plus the participant's color-calibration rows, if any, so the
+// client can rebuild calibration state (deriveColorCalibrationState in color_calibration.js). The
+// study is a single session, so the one data file is reported as session 1.
 
 header('Content-Type: application/json');
 
-const DATA_PREFIX = 'MAFC2_EXPT';
+const PREFIXES = ['woto', 'woto_test'];
 
 $subjectId = $_GET['subject_id'] ?? null;
+$prefix = $_GET['prefix'] ?? null;
 
-if (!is_string($subjectId) || !preg_match('/^[A-Za-z0-9_-]{1,40}$/', $subjectId)) {
+if (!is_string($subjectId) || !preg_match('/^[A-Za-z0-9_-]{1,40}$/', $subjectId) || !in_array($prefix, PREFIXES, true)) {
     http_response_code(400);
-    echo json_encode(['error' => 'invalid subject_id']);
+    echo json_encode(['error' => 'invalid request']);
     exit;
 }
 
-$dataDir = __DIR__ . '/data';
-$pattern = sprintf('%s/%s_%s_S??.csv', $dataDir, DATA_PREFIX, $subjectId);
+require __DIR__ . '/data_dir.php';
 
 $sessions = [];
-foreach (glob($pattern) as $file) {
-    if (preg_match('/_S(\d{2})\.csv$/', $file, $matches)) {
-        $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        array_shift($lines); // drop header
-        $sessions[] = ['session' => (int)$matches[1], 'rows' => count($lines), 'lines' => $lines];
-    }
+$dataFile = sprintf('%s/%s_%s.csv', dataDir(), $prefix, $subjectId);
+if (is_file($dataFile)) {
+    $lines = file($dataFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    array_shift($lines); // drop header
+    $sessions[] = ['session' => 1, 'rows' => count($lines), 'lines' => $lines];
 }
 
 // COLOR_CSV_HEADER in config.js, kept in the same order here since no CSV parser exists client-side
 $colorColumns = ['date', 'time', 'sid', 'seed', 'trial', 'gain_orange', 'gain_green', 'gain_blue', 'gain_magenta'];
-$colorFile = sprintf('%s/%s_%s_COLOR.csv', $dataDir, DATA_PREFIX, $subjectId);
+$colorFile = sprintf('%s/%s_%s_color.csv', dataDir(), $prefix, $subjectId);
 
 $colorRows = [];
 if (is_file($colorFile)) {

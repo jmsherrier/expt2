@@ -3,11 +3,11 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const files = [
+  'js/config.js',
   'js/colors.js',
   'js/conditions.js',
   'js/rng.js',
   'js/permutations.js',
-  'js/config.js',
   'js/triallist.js',
 ];
 vm.runInThisContext(files.map(file => fs.readFileSync(file, 'utf8')).join('\n'));

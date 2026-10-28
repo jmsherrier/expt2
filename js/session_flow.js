@@ -43,13 +43,12 @@ function buildTrialInfo(trial, result, subjectId, seed, trialIndex, gains) {
 function saveSessionData(subjectId, session, sessionData) {
   if (!serverAvailable) return Promise.resolve();
   const csvText = CSV_HEADER + '\n' + sessionData.join('\n');
-  return enqueueSave('save.php', { subject_id: subjectId, session, csv: csvText });
+  return enqueueSave('save.php', { subject_id: subjectId, prefix: DATA_PREFIX, session, csv: csvText });
 }
 
-// no subject label to build a meaningful name from anymore -- the researcher renames the
-// downloaded file themself
-function sessionDataFilename() {
-  return 'rename.csv';
+// same name the server uses, so a backup download and a server file are interchangeable
+function sessionDataFilename(subjectId) {
+  return `${DATA_PREFIX}_${subjectId}.csv`;
 }
 
 // any failure here -- fetch() throwing outright under file://, or a 404/non-JSON body when no
@@ -58,7 +57,7 @@ function sessionDataFilename() {
 // instead of retrying against endpoints that were never going to answer
 async function fetchProgress(subjectId) {
   try {
-    const res = await fetch(`progress.php?subject_id=${encodeURIComponent(subjectId)}`);
+    const res = await fetch(`progress.php?subject_id=${encodeURIComponent(subjectId)}&prefix=${encodeURIComponent(DATA_PREFIX)}`);
     const body = await res.text();
     return JSON.parse(body);
   } catch (error) {
@@ -198,53 +197,51 @@ function buildMainTimeline(trials, subjectId, seed, session, sessionData, startI
   return nodes;
 }
 
-// local-backup screen shown at the end of every session, after the server save (enqueueSave, with
-// its own retries) has settled -- gives the subject their own copy on disk regardless of whether
-// the server-side copy succeeded. choices: 'NO_KEYS' plus a manual jsPsych.finishTrial() from the
+// fallback download, shown only when the server never confirmed the data (save failed after every
+// retry, or no server at all) -- choices: 'NO_KEYS' plus a manual jsPsych.finishTrial() from the
 // button (same pattern as makeCalibrationRepTrial's confirm button) means the trial can't be
 // skipped without actually triggering the download
 function buildLocalSaveTrial(subjectId, session, sessionData) {
   return {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
-      <p>${LOCAL_SAVE_PROMPT_TEXT}</p>
-      <button id="local-save-btn" style="font-size:1.1em; padding:8px 24px;">Save Data to Computer</button>
+      ${LOCAL_SAVE_PROMPT_TEXT}
+      <button id="local-save-btn" style="font-size:1.1em; padding:8px 24px;">Download data file</button>
     `,
     choices: 'NO_KEYS',
     data: { phase: 'local_save_prompt' },
     on_load: function () {
       document.getElementById('local-save-btn').addEventListener('click', function () {
         const csvText = CSV_HEADER + '\n' + sessionData.join('\n');
-        downloadCsvText(sessionDataFilename(), csvText);
+        downloadCsvText(sessionDataFilename(subjectId), csvText);
         jsPsych.finishTrial();
       });
     },
   };
 }
 
-// waits for the server save to settle (success or every retry exhausted, see enqueueSave), reports
-// failure plainly instead of the old behavior of proceeding either way, then always prompts a local
-// download as a backup -- saveStatus is read by the next trial's stimulus function, which only runs
-// after this callFunction trial has already finished
+// waits for the server save to settle (success or every retry exhausted, see enqueueSave) and exits
+// fullscreen. Saved: the completion screen stays up for good, nothing to download. Not saved
+// (server failed, or none -- serverAvailable is false and no save was ever attempted): the
+// participant downloads the file instead, so the data is never lost
 function sessionCompleteTimeline(subjectId, session, sessionData) {
-  const saveStatus = { ok: true };
+  const saveStatus = { ok: false };
+  const finalScreen = html => ({ type: jsPsychHtmlKeyboardResponse, stimulus: html, choices: 'NO_KEYS', data: { phase: 'session_complete' } });
   return [
     {
       type: jsPsychCallFunction,
       async: true,
       func: function (done) {
-        lastSaveResponse.then(() => { saveStatus.ok = true; done(); })
+        lastSaveResponse.then(() => { saveStatus.ok = serverAvailable; done(); })
           .catch(() => { saveStatus.ok = false; done(); });
       },
     },
+    { type: jsPsychFullscreen, fullscreen_mode: false },
+    { timeline: [finalScreen(SESSION_COMPLETE_TEXT)], conditional_function: () => saveStatus.ok },
     {
-      type: jsPsychHtmlKeyboardResponse,
-      stimulus: function () { return saveStatus.ok ? SESSION_COMPLETE_TEXT : SAVE_FAILED_TEXT; },
-      choices: 'NO_KEYS',
-      trial_duration: 4000,
-      data: { phase: 'session_complete' },
+      timeline: [buildLocalSaveTrial(subjectId, session, sessionData), finalScreen(STUDY_COMPLETE_TEXT)],
+      conditional_function: () => !saveStatus.ok,
     },
-    buildLocalSaveTrial(subjectId, session, sessionData),
   ];
 }
 
@@ -303,7 +300,6 @@ function runSession(subjectId, sessionNumber, resumeFromTrial, isFirstSession, c
   if (practiceBlocks.length) timeline.push(transitionMessageTrial());
   timeline.push(...buildMainTimeline(trialsToRun, subjectId, seed, sessionNumber, sessionData, resumeFromTrial, calibState));
   timeline.push(...sessionCompleteTimeline(subjectId, sessionNumber, sessionData));
-  timeline.push({ type: jsPsychFullscreen, fullscreen_mode: false });
 
   jsPsych.run(timeline);
 }

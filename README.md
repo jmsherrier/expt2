@@ -13,13 +13,14 @@ with one of four keys, then rates their confidence.
 
 - **Controlled stimuli.** A virtual chinrest sizes everything in degrees of visual angle, and an
   equiluminant four-color palette (equal CAM16 lightness and colorfulness) is calibrated per
-  participant by slider matching followed by a check-and-refine step.
+  participant against a fixed green reference: pairwise matching, then all colors together with
+  a check-and-refine step.
 - **Balanced, reproducible design.** 8 dot-count conditions × 2 stimulus durations
-  (150 / 500 ms), with seeded trial lists balanced per condition, correct color and duration.
+  (100 / 500 ms), with seeded trial lists balanced per condition, correct color and duration.
   A Node script (`verify_durations.js`) checks those guarantees per subject.
-- **Runs anywhere.** On a PHP host every trial is saved as it happens and sessions resume after
-  a crash; with no server, or as a single self-contained HTML file built by
-  `build_standalone.js`, it downloads the data at the end.
+- **Runs anywhere.** On a PHP host every trial is saved to `woto_data/` as it happens and
+  sessions resume after a crash (re-enter the same username); with no server it asks the
+  participant to download the data at the end.
 - **Pilots.** Standalone duration, palette-bias and WOTO × duration pilots informed the main
   design.
 
@@ -49,20 +50,19 @@ Eight conditions, specified in dot counts:
 reordering `CONDITIONS_CSV` in `js/conditions.js` renumbers saved data. Don't reorder after
 collection starts.
 
-**Trial budget:** 20 reps × 8 conditions = 160 trials, run as one session of 4 blocks × 40 trials
-(a break after every block). Each condition's 20 reps split evenly across
-`STIMULUS_DURATIONS` (10 at 150ms, 10 at 500ms), so every condition runs at both durations. To
-change it, edit `N_REPS`, `N_SESSIONS`, `SESSION_SIZE` in `js/config.js` and keep
+**Trial budget:** 90 reps × 8 conditions = 720 trials (45 per condition per duration), run as one
+session of 18 blocks × 40 trials (a break after every block). Each condition's reps split evenly
+across `STIMULUS_DURATIONS` (100 / 500 ms). To change it, edit `N_REPS`, `N_SESSIONS`,
+`SESSION_SIZE` in `js/config.js` and keep
 
     N_REPS * 8 === N_SESSIONS * SESSION_SIZE
 
 with `SESSION_SIZE` divisible by `N_TRIAL_TO_BREAK * BLOCKS_PER_RUN * RUNS_PER_SESSION`.
 
-Verified per subject (`verify_durations.js`): each session is exactly 160 trials, split exactly
-80/80 between 150ms and 500ms session-wide, and within any single `(n_choice, condition_id,
-correct_color)` cell the two durations' counts differ by at most 1. Trial lists are deterministic
-from a run seed (no subject-entered label anymore -- see "Trial labels, then no trial label"
-under "What changed").
+Verified per subject (`verify_durations.js`): each session is exactly `SESSION_SIZE` trials, split
+exactly in half between the two durations session-wide and within every condition, and within any
+single `(n_choice, condition_id, correct_color)` cell the two durations' counts differ by at most 1.
+Trial lists are deterministic from the participant's username (it seeds the trial RNG).
 
 Day-1 practice is a single 20-trial easy+medium mixed block with feedback (`N_PRACTICE_MIXED_DAY1`
 in `js/config.js`), shrunk from the original 60 (20 easy w/ feedback, 20 medium w/ feedback, 20
@@ -89,14 +89,17 @@ The break screen asks participants to take a slightly longer break if they feel 
 distracted; the "Press spacebar to continue to the next block" screen after the 30 s countdown
 waits indefinitely, so a longer break needs no extra code.
 
-**Color calibration: check and refine.** After the 2 slider-matching reps (sliders start at random
-positions, gains averaged), participants see 3 brief dot clouds (1.5 s each, same number of dots
-per color) drawn at those averaged gains, and judge whether any color stood out or was hard to
-notice. They then do one refinement rep with the sliders starting at the averaged gains; its
-values are the final gains used for the session. Constants: `N_COLOR_CALIBRATION_REPS`,
-`CALIBRATION_CHECK_STIMULI`, `CALIBRATION_CHECK_MS` in `js/config.js`. In the `_COLOR.csv`, rows 1-2
-are the matching reps and row 3 is the refinement. The main CSV's `gain_*` columns hold the final
-(refined) gains.
+**Color calibration: green reference.** Green is fixed at `GREEN_FIXED_GAIN` (0.55) and can't be
+changed; the other colors' sliders run green ± `CALIBRATION_RANGE` (0.25-0.85). Step 1: one
+pairwise screen per other color (only green and that color's dots, its slider starting at a random
+position). Step 2: all four colors together, starting at the step-1 values; then 3 brief
+equal-count dot clouds (1.5 s each) to judge whether any color stands out or is hard to notice;
+then one refinement screen starting where they left off, whose values are final. In
+`woto_data/woto_<username>_color.csv`, rows 1-3 are the orange/blue/magenta pairwise screens, row
+4 the all-colors screen and row 5 the refinement. The main CSV's `gain_*` columns hold the final
+gains. 0.55 sits mid-range so the whole display can't end up dim, and slightly below the green the
+first pilots matched to, since green was over-picked as a wrong option; because the others are
+matched to green, it mostly sets overall brightness.
 
 ## What changed
 
@@ -131,7 +134,7 @@ names no longer describe what's on screen and `drawFeedback` shows the literal c
 subjects.
 
 **Stimulus duration.** Each main and practice trial carries one duration from
-`STIMULUS_DURATIONS` (`150` or `500` ms currently, chosen from the duration pilot below). Durations
+`STIMULUS_DURATIONS` (`100` or `500` ms currently, chosen from the duration pilot below). Durations
 are assigned with the seeded RNG after trial construction: each `(n_choice, condition_id,
 correct_color)` cell is balanced as evenly as possible, and session-wide counts are exactly equal
 when the session size allows it (160 trials / 2 durations = 80 each). The same balancing rule is
@@ -196,46 +199,35 @@ next-session branch) are all left intact and still keyed off `isFirstSession`, s
 
 ## Deploy
 
-**With a server (PHP-capable web root):** copy the folder, open `index.html` over `http(s)://`.
-PHP creates `data/` on first save; make sure the web server user can write to the folder. Every
-trial is saved to `save.php` as it happens (crash-safe, resumable), and `progress.php` is what
-resume reads back on reopen. Check `data/` for the two CSV files after a run.
-
-**Without a server:** `index.html` can just be opened directly (double-click, `file://`, or any
-plain static host with no PHP) -- `fetchProgress` (`js/session_flow.js`) detects there's no
-`progress.php` to reach and falls back to a fresh, non-resumable run, skipping every per-trial
-`save.php`/`save_color.php` call instead of retrying against endpoints that don't exist. Data
-isn't saved anywhere until the very end, where a "Save Data to Computer" button downloads the
-session CSV via the browser (same mechanism the standalone pilots below use). Trade-off: no
-crash recovery -- if the tab closes mid-session, that session's data is gone, so this mode is
-really only sensible at the current 160-trial (~15-20 min) budget, not the original 720-trial
-one-hour design.
-
-**One file, no folder:** `index-standalone.html` is `index.html` with every local dependency
-(all 12 `js/` files, `style.css`, `img/card.png` as a base64 data URI) inlined into a single file
--- generated by `node build_standalone.js`. Hand someone this one file and they can just double-
-click it; no folder structure to preserve, still needs internet once for the jsPsych CDN scripts.
-Same no-server behavior as above (downloads `rename.csv` at the end, no trial label to enter).
-Re-run the build script any time the source `js/*.js`/`style.css`/`img/card.png` change --
-`index-standalone.html` isn't hand-edited, it's regenerated:
+Participants run `woto.html`; `woto_test.html` is the same page with 16 main trials and 4 practice
+trials, for checking the flow and server saving before collection. Both are single files with
+every local dependency inlined (still need internet for the jsPsych CDN scripts), regenerated with:
 
 ```bash
-node build_standalone.js                              # canonical build (js/config.js as-is)
-node build_standalone.js . '{"N_REPS":50,"SESSION_SIZE":400,"N_TRIAL_TO_BREAK":40,"BLOCKS_PER_RUN":10,"RUNS_PER_SESSION":1}' index-standalone-joseph.html
-node build_standalone.js . '{"N_REPS":76,"SESSION_SIZE":608,"N_TRIAL_TO_BREAK":38,"BLOCKS_PER_RUN":16,"RUNS_PER_SESSION":1,"SHOW_CONSENT":true}' index-standalone-608.html
+node build_standalone.js . '{}' woto.html
+node build_standalone.js . '{"N_REPS":2,"SESSION_SIZE":16,"N_TRIAL_TO_BREAK":8,"BLOCKS_PER_RUN":2,"N_PRACTICE_MIXED_DAY1":4,"BREAK_DURATION":5,"DATA_PREFIX":"woto_test"}' woto_test.html
 ```
 
-The second argument is an optional JSON object of `js/config.js` constants to override in that
-one build only -- `js/config.js` on disk is never touched. Three builds currently exist:
-`index-standalone.html` (the canonical 20-reps/condition, 160-trial config, for Doby) and
-`index-standalone-joseph.html` (50 reps/condition, 400 trials, one longer run for a fuller
-single-subject sample), and `index-standalone-608.html` (76 reps/condition, 608 trials in 16
-blocks of 38, for general participants; 76 rather than 75 so every condition x duration cell gets
-exactly 38). Only the 608 build sets `SHOW_CONSENT`, which opens with the IRB2026-66 online
-consent form (`js/consent.js`, verbatim from Consent_Behavioral_2026.pdf); the participant's
-store/share choice lands in the main CSV's last column, `share_data` (yes/no, blank in builds without
-consent). "I do not consent" ends the page there. All run the same 8 conditions x `STIMULUS_DURATIONS` (150/500ms)
-design, just at different sample sizes.
+(the JSON overrides `js/config.js` constants for that build only).
+
+**Server (Plesk):** upload `woto.html`, `woto_test.html`, `save.php`, `save_color.php`,
+`progress.php` and `data_dir.php` to the same folder. The first save creates `woto_data/` next to
+them (with an `.htaccess` blocking web access); the PHP user needs write permission there.
+Flow: consent → Georgia Tech username (e.g. `jsherrier3`, `@gatech.edu` is stripped) → pre-check →
+experiment. Every trial is saved as it happens to `woto_data/woto_<username>.csv` (calibration to
+`woto_<username>_color.csv`); the test page writes `woto_test_<username>...` instead, so test runs
+never collide with or resume a real participant's file. Re-entering the same username after a
+crash resumes where the saved data ends; after a finished session it shows the completion screen.
+Check that `https://<site>/<folder>/woto_data/` returns 403: if Plesk's nginx serves static files
+directly, the `.htaccess` is skipped and the folder must be protected in Plesk instead.
+
+**No server:** if the save endpoints can't be reached (file opened locally, plain static host) or a
+save fails after every retry, the end screen asks the participant to download
+`woto_<username>.csv` and email it.
+
+Older builds (`index-standalone.html`, 160 trials; `index-standalone-joseph.html`, 400 trials)
+predate the current calibration and server setup and are kept only as records of what earlier
+pilots ran.
 
 ## Duration pilot
 
@@ -255,7 +247,7 @@ confidence is in hand, update `STIMULUS_DURATIONS` in `js/config.js` accordingly
 - `APERTURE_RADIUS_DEG` and `DOT_RADIUS_DEG` are still the original placeholders pending real
   display calibration. Max density here is 280 dots (`[100,80,65,35]`), below the previous
   experiment's, so rejection sampling has room — but the values are still unvalidated.
-- `STIMULUS_DURATIONS = [150, 500]` is set (each of the 8 conditions runs at both, 10 reps
+- `STIMULUS_DURATIONS = [100, 500]` is set (each of the 8 conditions runs at both, 45 reps
   apiece), but it hasn't itself been validated against a larger sample — the single-subject
   duration and WOTO x duration pilots above are what it's based on.
 - Practice pools repeat conditions rather than sampling distinct ones (3 conditions across 20

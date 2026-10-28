@@ -36,12 +36,10 @@ function applyGain(hex, gain) {
   return `#${toHex(clamp(r))}${toHex(clamp(g))}${toHex(clamp(b))}`;
 }
 
-// per-color multiplier applied on top of the base COLORS palette -- 1.0 means unadjusted. the
-// calibration slider only ever runs 0..1 (CALIBRATION_FLOOR..1 in config.js), so gain never
-// exceeds 1.0 in practice. starting the staircase at 75% leaves headroom to move a color both
-// brighter and dimmer during matching
-const DEFAULT_START_GAIN = 0.75;
-const DEFAULT_COLOR_GAINS = { orange: DEFAULT_START_GAIN, green: DEFAULT_START_GAIN, blue: DEFAULT_START_GAIN, magenta: DEFAULT_START_GAIN };
+// per-color multiplier applied on top of the base COLORS palette -- 1.0 means unadjusted. every
+// color starts at green's fixed level (GREEN_FIXED_GAIN, config.js), the midpoint of the others'
+// slider range (CALIBRATION_MIN..CALIBRATION_MAX)
+const DEFAULT_COLOR_GAINS = { orange: GREEN_FIXED_GAIN, green: GREEN_FIXED_GAIN, blue: GREEN_FIXED_GAIN, magenta: GREEN_FIXED_GAIN };
 
 function getGainedColors(gains) {
   const gained = {};
