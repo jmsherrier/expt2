@@ -180,7 +180,6 @@ builds kept as records of what the first pilots ran.
 
 ## Open questions
 
-- `APERTURE_RADIUS_DEG` and `DOT_RADIUS_DEG` haven't been validated against real displays.
 - Color and response key are fixed together (green is always J), so a color bias and a key bias
   can't be told apart.
 - Practice draws repeatedly from a few easy/medium conditions rather than sampling distinct ones.
